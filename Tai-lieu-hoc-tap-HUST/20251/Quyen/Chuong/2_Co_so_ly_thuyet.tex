@@ -1,0 +1,222 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Chương này trình bày các cơ sở lý thuyết nền tảng phục vụ cho việc nghiên cứu và triển khai bài toán thay đổi thuộc tính khuôn mặt trong đồ án. Trước hết, chương giới thiệu những khái niệm cơ bản của xử lý ảnh số và vai trò của xử lý ảnh trong các hệ thống thị giác máy tính hiện đại. Tiếp theo, các nguyên lý của mạng sinh đối kháng (GAN) được trình bày nhằm làm rõ cơ sở hình thành các mô hình sinh ảnh. Trên nền tảng đó, bài toán thay đổi thuộc tính khuôn mặt và mô hình StarGAN cùng các nghiên cứu liên quan được phân tích. Cuối cùng, chương giới thiệu các chỉ số đánh giá chất lượng ảnh sinh, làm tiền đề cho quá trình thực nghiệm và đánh giá mô hình ở các chương sau.
+
+
+
+
+
+
+\section{Tổng quan về xử lý ảnh}
+\label{section:2.1}
+
+Xử lý ảnh số (Digital Image Processing) là một lĩnh vực quan trọng của khoa học máy tính và thị giác máy tính, nghiên cứu các phương pháp và thuật toán nhằm phân tích, biến đổi và trích xuất thông tin từ ảnh số. Với sự phát triển mạnh mẽ của các thiết bị thu nhận ảnh như máy ảnh số, camera giám sát, thiết bị di động và hệ thống cảm biến, xử lý ảnh ngày càng đóng vai trò then chốt trong nhiều lĩnh vực ứng dụng như nhận dạng khuôn mặt, y sinh, giám sát an ninh, xe tự hành và giải trí số~\cite{gonzalez2018digital}.
+
+Về mặt toán học, một ảnh số có thể được biểu diễn như một hàm hai chiều:
+\[
+f(x, y)
+\]
+trong đó \(x\) và \(y\) là các tọa độ không gian rời rạc, còn \(f(x, y)\) biểu diễn cường độ sáng (intensity) hoặc mức xám của điểm ảnh (pixel) tại vị trí tương ứng. Đối với ảnh màu, mỗi điểm ảnh thường được biểu diễn bởi một vector nhiều chiều, phổ biến nhất là trong không gian màu RGB với ba thành phần \(R\), \(G\) và \(B\)~\cite{gonzalez2018digital}.
+
+Ảnh số thực chất là kết quả của quá trình lấy mẫu (sampling) và lượng tử hóa (quantization) ảnh liên tục trong thế giới thực. Độ phân giải không gian của ảnh phụ thuộc vào mật độ lấy mẫu, trong khi độ phân giải cường độ phụ thuộc vào số mức xám được sử dụng để biểu diễn giá trị \(f(x, y)\). Hai yếu tố này ảnh hưởng trực tiếp đến chất lượng ảnh cũng như khả năng xử lý và phân tích về sau.
+
+Các bài toán trong xử lý ảnh số có thể được phân thành nhiều nhóm khác nhau. Nhóm đầu tiên là các bài toán tiền xử lý ảnh, bao gồm lọc nhiễu, tăng cường ảnh, cân bằng histogram và chuẩn hóa ảnh. Mục tiêu của các kỹ thuật này là cải thiện chất lượng ảnh đầu vào nhằm phục vụ tốt hơn cho các bước phân tích tiếp theo.
+
+Nhóm thứ hai là các bài toán phân tích ảnh, bao gồm phân đoạn ảnh, phát hiện biên, trích xuất đặc trưng và mô tả đối tượng. Các bài toán này nhằm chuyển đổi ảnh từ dạng dữ liệu mức thấp (pixel) sang các biểu diễn mức cao hơn, phản ánh cấu trúc và nội dung ngữ nghĩa của ảnh.
+
+Ở mức cao hơn, xử lý ảnh thường gắn liền với các bài toán nhận dạng và hiểu ảnh, chẳng hạn như nhận dạng khuôn mặt, nhận dạng đối tượng, ước lượng tư thế hay phân tích biểu cảm. Đây là những bài toán phức tạp, đòi hỏi sự kết hợp giữa xử lý ảnh, học máy và trí tuệ nhân tạo.
+
+Trong giai đoạn đầu, các phương pháp xử lý ảnh chủ yếu dựa trên các kỹ thuật thủ công (hand-crafted features), sử dụng các toán tử tuyến tính, phi tuyến và các mô hình toán học cổ điển. Mặc dù hiệu quả trong một số bài toán cụ thể, các phương pháp này thường gặp khó khăn khi đối mặt với sự đa dạng lớn của dữ liệu ảnh trong thực tế.
+
+Sự phát triển của học sâu (Deep Learning), đặc biệt là các mạng nơ-ron tích chập (Convolutional Neural Networks – CNN), đã tạo ra bước đột phá lớn trong lĩnh vực xử lý ảnh. Thay vì thiết kế đặc trưng thủ công, các mô hình học sâu có khả năng tự động học đặc trưng từ dữ liệu, cho phép đạt được hiệu suất vượt trội trong nhiều bài toán phức tạp.
+
+Các mô hình sinh ảnh dựa trên học sâu, tiêu biểu là Mạng sinh đối kháng (Generative Adversarial Networks – GAN), đã mở ra một hướng tiếp cận mới trong xử lý ảnh, không chỉ phân tích mà còn có khả năng tổng hợp và biến đổi ảnh với mức độ chân thực cao. Đây chính là nền tảng quan trọng cho các bài toán thay đổi thuộc tính khuôn mặt được nghiên cứu trong đồ án này.
+
+Phần này đã trình bày tổng quan về xử lý ảnh số, từ cách biểu diễn ảnh, các bài toán cơ bản cho đến sự chuyển dịch từ các phương pháp truyền thống sang các kỹ thuật dựa trên học sâu. Những kiến thức nền tảng này đóng vai trò quan trọng trong việc hiểu rõ các mô hình sinh ảnh hiện đại. Trên cơ sở đó, chương tiếp theo sẽ tập trung trình bày chi tiết về Mạng sinh đối kháng (GAN) – nền tảng cốt lõi của mô hình StarGAN được sử dụng trong đồ án.
+
+
+
+
+
+
+
+
+
+\section{Mạng sinh đối kháng - GAN}
+\label{section:2.2}
+
+Mạng sinh đối kháng (Generative Adversarial Network -- GAN) là một trong những mô hình học sâu tiêu biểu cho bài toán sinh dữ liệu, được Ian Goodfellow và cộng sự đề xuất lần đầu vào năm 2014~\cite{goodfellow2014generative}. Kể từ đó, GAN đã trở thành nền tảng cho nhiều hướng nghiên cứu quan trọng trong lĩnh vực xử lý ảnh và thị giác máy tính, đặc biệt là các bài toán sinh ảnh, chuyển đổi ảnh và chỉnh sửa nội dung ảnh.
+
+Về mặt khái niệm, GAN bao gồm hai mô hình học sâu được huấn luyện đồng thời trong một quá trình mang tính đối kháng: mô hình sinh (Generator) và mô hình phân biệt (Discriminator). Mục tiêu của Generator là học cách sinh ra các mẫu dữ liệu mới sao cho chúng có phân bố gần nhất với dữ liệu thật, trong khi Discriminator có nhiệm vụ phân biệt giữa dữ liệu thật và dữ liệu do Generator tạo ra. Hai mô hình này được huấn luyện đồng thời và cạnh tranh lẫn nhau, từ đó thúc đẩy Generator ngày càng sinh ra các mẫu dữ liệu có chất lượng cao hơn.
+
+Về mặt toán học, quá trình huấn luyện GAN có thể được mô tả như một bài toán tối ưu hai người chơi dạng min--max. Cụ thể, hàm mục tiêu của GAN được định nghĩa như sau~\cite{goodfellow2014generative}:
+\[
+\min_{G} \max_{D} \; \mathbb{E}_{\mathbf{x} \sim p_{\text{data}}(\mathbf{x})} \big[\log D(\mathbf{x})\big] 
++ \mathbb{E}_{\mathbf{z} \sim p_{\mathbf{z}}(\mathbf{z})} \big[\log \big(1 - D(G(\mathbf{z}))\big)\big],
+\]
+trong đó $G$ là Generator, $D$ là Discriminator, $\mathbf{x}$ là mẫu dữ liệu thật, và $\mathbf{z}$ là biến nhiễu ngẫu nhiên được lấy từ một phân bố đơn giản (thường là phân bố chuẩn hoặc phân bố đều). Mục tiêu của Discriminator là tối đa hóa khả năng phân biệt đúng, trong khi Generator cố gắng tối thiểu hóa khả năng bị Discriminator phát hiện~\cite{goodfellow2014generative}.
+
+Một ưu điểm quan trọng của GAN là khả năng học phân bố dữ liệu một cách linh hoạt mà không cần giả định rõ ràng về dạng phân bố xác suất. Nhờ đó, GAN có thể sinh ra các ảnh có độ sắc nét cao, chi tiết phong phú và mang tính chân thực vượt trội so với nhiều mô hình sinh truyền thống trước đây. Đặc biệt trong lĩnh vực xử lý ảnh, GAN đã được ứng dụng rộng rãi trong các bài toán như sinh ảnh khuôn mặt, siêu phân giải ảnh, tô màu ảnh, khôi phục ảnh và chuyển đổi phong cách ảnh.
+
+Tuy nhiên, việc huấn luyện GAN cũng đặt ra nhiều thách thức đáng kể. Một trong những vấn đề phổ biến nhất là hiện tượng mất cân bằng trong quá trình huấn luyện, khi Discriminator trở nên quá mạnh khiến Generator không thể học hiệu quả. Bên cạnh đó, GAN còn gặp các vấn đề như không hội tụ, dao động trong quá trình huấn luyện và hiện tượng \textit{mode collapse}, trong đó Generator chỉ sinh ra một số ít mẫu lặp lại thay vì bao phủ đầy đủ phân bố dữ liệu.
+
+Để khắc phục các hạn chế trên, nhiều biến thể và cải tiến của GAN đã được đề xuất, bao gồm Deep Convolutional GAN (DCGAN), Wasserstein GAN (WGAN), Conditional GAN (cGAN) và các mô hình GAN đa miền~\cite{tenYearsGANsSurvey2023}. Các hướng tiếp cận này đóng vai trò quan trọng trong việc cải thiện độ ổn định của quá trình huấn luyện cũng như nâng cao chất lượng dữ liệu sinh ra, đặc biệt là trong các bài toán liên quan đến chỉnh sửa và biến đổi ảnh khuôn mặt.
+
+Nhìn chung, GAN đã tạo ra một bước ngoặt lớn trong lĩnh vực học sâu sinh dữ liệu. Những đặc điểm và thách thức của GAN chính là nền tảng quan trọng để phát triển các mô hình nâng cao hơn, trong đó có các mô hình đa miền như StarGAN, sẽ được trình bày chi tiết trong các mục tiếp theo của đồ án.
+
+
+
+
+
+
+
+\section{Bài toán thay đổi thuộc tính khuôn mặt}
+\label{section:2.3}
+
+Bài toán thay đổi thuộc tính khuôn mặt (facial attribute editing) là một bài toán quan trọng trong lĩnh vực thị giác máy tính và học sâu, với mục tiêu chỉnh sửa một hoặc nhiều thuộc tính ngữ nghĩa của khuôn mặt trong ảnh đầu vào trong khi vẫn bảo toàn các đặc trưng nhận dạng và cấu trúc tổng thể của khuôn mặt đó. Các thuộc tính thường được quan tâm bao gồm màu tóc, kiểu tóc, giới tính, độ tuổi, trạng thái biểu cảm, việc đeo kính, trang điểm, hoặc các đặc trưng mang tính phong cách khác. Bài toán này có mối liên hệ chặt chẽ với các bài toán dịch ảnh sang ảnh (image-to-image translation), tuy nhiên mang tính đặc thù cao do yêu cầu khắt khe về tính nhất quán danh tính và tính tự nhiên của ảnh sinh ra.
+
+Về bản chất, thay đổi thuộc tính khuôn mặt không chỉ là việc biến đổi các pixel của ảnh mà còn là quá trình điều khiển các yếu tố ngữ nghĩa ở mức cao. Một mô hình giải quyết tốt bài toán này cần đảm bảo ba yêu cầu quan trọng: (i) thuộc tính mục tiêu phải được thể hiện rõ ràng và chính xác trong ảnh sinh, (ii) các thuộc tính không liên quan không bị thay đổi một cách không mong muốn, và (iii) ảnh kết quả phải có chất lượng thị giác cao, trông tự nhiên và không xuất hiện các hiện tượng méo mó hay nhiễu thị giác. Việc đồng thời thỏa mãn cả ba yêu cầu này tạo ra thách thức lớn đối với các mô hình học sâu, đặc biệt khi số lượng thuộc tính cần xử lý ngày càng tăng.
+
+Trong các nghiên cứu ban đầu, bài toán thay đổi thuộc tính khuôn mặt thường được tiếp cận bằng các mô hình sinh ảnh có điều kiện (conditional generative models). Các phương pháp này sử dụng nhãn thuộc tính như một điều kiện đầu vào cho mô hình sinh, cho phép điều khiển kết quả sinh ra theo thuộc tính mong muốn. Tuy nhiên, phần lớn các phương pháp truyền thống chỉ tập trung vào việc sinh ảnh mới từ nhiễu hoặc từ ảnh đầu vào đã được mã hóa, mà chưa giải quyết triệt để vấn đề bảo toàn thông tin gốc của khuôn mặt, đặc biệt là danh tính của đối tượng trong ảnh.
+
+Sự ra đời của mạng sinh đối kháng (GAN) đã mở ra một hướng tiếp cận mới đầy triển vọng cho bài toán này. GAN cho phép học trực tiếp phân phối dữ liệu ảnh khuôn mặt và sinh ra các ảnh có chất lượng cao, tiệm cận ảnh thật. Dựa trên nền tảng này, nhiều mô hình thay đổi thuộc tính khuôn mặt đã được đề xuất, tiêu biểu là AttGAN – một trong những công trình có ảnh hưởng lớn trong lĩnh vực này. AttGAN được thiết kế với triết lý “chỉ thay đổi những gì cần thay đổi”, trong đó mô hình được huấn luyện để chỉnh sửa thuộc tính mục tiêu trong khi duy trì tối đa các đặc trưng khác của ảnh gốc.
+
+AttGAN sử dụng một kiến trúc encoder–decoder kết hợp với bộ phân loại thuộc tính và bộ phân biệt đối kháng. Trong quá trình huấn luyện, mô hình đồng thời tối ưu ba thành phần: ràng buộc phân loại thuộc tính nhằm đảm bảo ảnh sinh mang thuộc tính mong muốn, ràng buộc tái tạo nhằm giữ lại các thông tin không liên quan tới thuộc tính cần chỉnh sửa, và ràng buộc đối kháng nhằm nâng cao chất lượng thị giác của ảnh sinh. Cách tiếp cận này giúp AttGAN đạt được kết quả tốt trong nhiều kịch bản chỉnh sửa thuộc tính đơn lẻ hoặc kết hợp nhiều thuộc tính~\cite{he2017attgan}.
+
+Mặc dù đạt được nhiều kết quả khả quan, các phương pháp như AttGAN vẫn gặp phải những hạn chế nhất định. Một trong những vấn đề nổi bật là hiện tượng “rò rỉ thuộc tính”, trong đó việc chỉnh sửa một thuộc tính có thể vô tình làm thay đổi các thuộc tính khác có liên quan về mặt ngữ nghĩa. Ví dụ, việc chuyển đổi giới tính có thể kéo theo sự thay đổi không mong muốn về kiểu tóc hoặc trang điểm. Ngoài ra, khi chỉnh sửa nhiều thuộc tính cùng lúc, mô hình có thể gặp khó khăn trong việc cân bằng mức độ ảnh hưởng của từng thuộc tính, dẫn đến kết quả không ổn định.
+
+Để khắc phục các hạn chế trên, một số nghiên cứu gần đây đã đề xuất sử dụng thông tin không gian và ngữ nghĩa để hướng dẫn quá trình chỉnh sửa. Tiêu biểu trong số đó là MagGAN, mô hình khai thác mặt nạ ngữ nghĩa (semantic mask) nhằm xác định chính xác vùng ảnh liên quan đến thuộc tính cần chỉnh sửa~\cite{tang2019maggan}. Bằng cách tập trung sự thay đổi vào các vùng quan trọng và hạn chế tác động lên các vùng khác, MagGAN cho phép sinh ra các ảnh có độ phân giải cao hơn và bảo toàn cấu trúc khuôn mặt tốt hơn so với các phương pháp trước đó.
+
+Bên cạnh đó, một hướng tiếp cận quan trọng khác trong bài toán thay đổi thuộc tính khuôn mặt là việc xử lý đồng thời nhiều thuộc tính trong một mô hình duy nhất. Điều này đặc biệt quan trọng trong các ứng dụng thực tế, nơi người dùng thường có nhu cầu chỉnh sửa nhiều đặc trưng cùng lúc. Tuy nhiên, việc huấn luyện một mô hình có khả năng xử lý đa thuộc tính đặt ra yêu cầu cao về kiến trúc mạng, chiến lược huấn luyện cũng như dữ liệu huấn luyện đủ đa dạng. Các nghiên cứu chỉ ra rằng mối quan hệ phụ thuộc và tương tác giữa các thuộc tính là yếu tố then chốt ảnh hưởng đến chất lượng ảnh sinh trong các kịch bản đa thuộc tính.
+
+Từ góc độ ứng dụng, bài toán thay đổi thuộc tính khuôn mặt có tiềm năng ứng dụng rộng rãi trong nhiều lĩnh vực khác nhau. Trong ngành công nghiệp giải trí và truyền thông, các công nghệ này được sử dụng để chỉnh sửa ảnh chân dung, tạo hiệu ứng hình ảnh hoặc hỗ trợ sản xuất nội dung số. Trong lĩnh vực an ninh và pháp y, thay đổi thuộc tính khuôn mặt có thể hỗ trợ mô phỏng ngoại hình theo độ tuổi hoặc đặc điểm mô tả. Ngoài ra, bài toán này cũng đóng vai trò quan trọng trong nghiên cứu về biểu diễn ngữ nghĩa của hình ảnh và khả năng kiểm soát quá trình sinh dữ liệu của các mô hình học sâu.
+
+Tóm lại, bài toán thay đổi thuộc tính khuôn mặt là một bài toán phức tạp, đòi hỏi sự kết hợp giữa mô hình hóa ngữ nghĩa, bảo toàn thông tin gốc và đảm bảo chất lượng thị giác. Mặc dù đã có nhiều công trình nghiên cứu đạt được những kết quả đáng ghi nhận, vẫn còn tồn tại nhiều thách thức cần tiếp tục được giải quyết, đặc biệt trong bối cảnh chỉnh sửa đa thuộc tính và ứng dụng thực tế. Những vấn đề này cũng chính là động lực thúc đẩy sự ra đời của các mô hình tổng quát hơn như StarGAN, sẽ được trình bày chi tiết trong phần tiếp theo của chương này.
+
+
+
+
+
+
+
+
+\section{Mô hình StarGAN và các nghiên cứu liên quan}
+\label{section:2.4}
+
+\subsection{Tổng quan}
+
+Như đã trình bày trong Mục~\ref{section:2.3}, bài toán thay đổi thuộc tính khuôn mặt đặt ra yêu cầu cao về khả năng chỉnh sửa có kiểm soát các thuộc tính mong muốn, đồng thời bảo toàn các đặc trưng không liên quan trong ảnh gốc. Trong bối cảnh đó, các mô hình dựa trên GAN đã chứng minh hiệu quả vượt trội, đặc biệt là các mô hình dịch ảnh sang ảnh. Tuy nhiên, phần lớn các phương pháp ban đầu chỉ tập trung vào việc xử lý một cặp miền hoặc một thuộc tính cụ thể, dẫn đến hạn chế lớn về khả năng mở rộng. Mô hình StarGAN được đề xuất nhằm giải quyết trực tiếp vấn đề này bằng cách thống nhất việc học đa miền trong một kiến trúc duy nhất.
+
+Trước khi StarGAN ra đời, nhiều nghiên cứu về dịch ảnh sang ảnh đa miền đã được đề xuất, tiêu biểu là CycleGAN và các biến thể của nó \cite{Zhu2018CycleGAN}. Mặc dù CycleGAN cho phép học ánh xạ giữa hai miền ảnh không có cặp tương ứng, mô hình này vẫn yêu cầu huấn luyện riêng cho từng cặp miền. Khi số lượng miền tăng lên, số lượng mô hình cần huấn luyện tăng theo bậc hai, dẫn đến chi phí huấn luyện và lưu trữ rất lớn.
+
+Trong bối cảnh bài toán thay đổi thuộc tính khuôn mặt, mỗi thuộc tính (ví dụ: tóc vàng, đeo kính, râu mép) có thể được xem là một miền ảnh riêng biệt. Do đó, nếu áp dụng trực tiếp các mô hình kiểu CycleGAN, số lượng mạng cần huấn luyện sẽ tăng nhanh theo số thuộc tính, gây khó khăn lớn trong thực tế triển khai. Ngoài ra, các mô hình này thường không tận dụng được mối quan hệ tiềm ẩn giữa các thuộc tính, dẫn đến hiệu quả học chưa tối ưu.
+
+\subsection{Ý tưởng của StarGAN}
+
+StarGAN (Star-shaped Generative Adversarial Network) được Choi và cộng sự đề xuất nhằm giải quyết bài toán dịch ảnh đa miền trong một mô hình duy nhất ~\cite{Choi2018StarGAN}. Thay vì huấn luyện nhiều mạng cho từng cặp miền, StarGAN sử dụng một generator và một discriminator chung, trong đó thông tin về miền đích được đưa trực tiếp vào quá trình sinh ảnh thông qua vector thuộc tính.
+\begin{figure}
+    \centering
+    \includegraphics[width=0.25\linewidth]{Hinhve/GAN-overview.png}
+    \caption{Hình minh họa StarGAN thể hiện cấu trúc hình sao kết nối đa miền~\cite{Choi2018StarGAN}}
+    \label{fig:GAN-overview}
+\end{figure}
+
+Ý tưởng trung tâm của StarGAN là mô hình hóa tất cả các miền ảnh trong một không gian chung, và điều khiển quá trình sinh ảnh bằng cách thay đổi vector điều kiện biểu diễn miền mong muốn (Hình~\ref{fig:GAN-overview}). Cách tiếp cận này không chỉ giúp giảm đáng kể số lượng mô hình cần huấn luyện mà còn cho phép mô hình học được các đặc trưng chung giữa nhiều miền khác nhau, từ đó cải thiện khả năng tổng quát hóa.
+
+
+Kiến trúc StarGAN bao gồm hai thành phần chính: bộ sinh (Generator) và bộ phân biệt (Discriminator). Bộ sinh nhận đầu vào là một ảnh khuôn mặt và một vector biểu diễn thuộc tính đích, sau đó sinh ra ảnh mới có các thuộc tính tương ứng. Bộ phân biệt vừa đóng vai trò phân biệt ảnh thật và ảnh giả, vừa thực hiện nhiệm vụ phân loại miền của ảnh đầu vào.
+
+Cụ thể, generator $G$ nhận đầu vào là ảnh $x$ và vector thuộc tính mục tiêu $c$, sinh ra ảnh $G(x, c)$. Vector $c$ thường được biểu diễn dưới dạng one-hot hoặc multi-hot, tùy theo số lượng thuộc tính được xét. Discriminator $D$ được thiết kế với hai nhánh đầu ra: một nhánh $D_{\text{adv}}$ để phân biệt ảnh thật/giả và một nhánh $D_{\text{cls}}$ để dự đoán thuộc tính của ảnh. Cách thiết kế này cho phép mô hình vừa học được phân phối ảnh, vừa học được mối quan hệ giữa ảnh và thuộc tính.
+
+\subsection{Các hàm mất mát trong StarGAN}
+
+StarGAN sử dụng nhiều thành phần hàm mất mát để đảm bảo chất lượng ảnh sinh ra cũng như tính chính xác của thuộc tính~\cite{Choi2018StarGAN}.
+
+Trước hết, hàm mất mát đối kháng (adversarial loss) được sử dụng để đảm bảo ảnh sinh có phân phối gần với ảnh thật. Thành phần này giúp generator học cách tạo ra các ảnh có chất lượng thị giác cao và khó bị discriminator phân biệt.
+
+Bên cạnh đó, StarGAN sử dụng hàm mất mát phân loại thuộc tính. Discriminator được huấn luyện để dự đoán đúng thuộc tính của ảnh thật, trong khi generator được huấn luyện để tạo ra ảnh giả sao cho discriminator dự đoán đúng thuộc tính mục tiêu. Thành phần này đóng vai trò then chốt trong việc đảm bảo ảnh sinh ra phản ánh chính xác thuộc tính mong muốn.
+
+Cuối cùng, StarGAN áp dụng hàm mất mát tái tạo (cycle consistency loss) nhằm bảo toàn nội dung không liên quan đến thuộc tính cần chỉnh sửa. Cụ thể, sau khi chuyển ảnh từ miền gốc sang miền đích, generator tiếp tục chuyển ngược ảnh đó về miền ban đầu, và sự khác biệt giữa ảnh ban đầu và ảnh tái tạo được tối thiểu hóa. Điều này giúp hạn chế hiện tượng biến dạng không mong muốn và giữ lại các đặc trưng nhận dạng của khuôn mặt.
+
+\subsection{Ưu điểm của StarGAN trong bài toán thay đổi thuộc tính khuôn mặt}
+
+Một trong những ưu điểm nổi bật của StarGAN là khả năng xử lý nhiều thuộc tính trong một mô hình duy nhất. Điều này đặc biệt phù hợp với các tập dữ liệu khuôn mặt phổ biến như CelebA, nơi mỗi ảnh được gán nhãn nhiều thuộc tính cùng lúc. Nhờ kiến trúc thống nhất, StarGAN cho phép thay đổi linh hoạt một hoặc nhiều thuộc tính chỉ bằng cách điều chỉnh vector điều kiện đầu vào.
+
+Ngoài ra, việc chia sẻ tham số giữa các miền giúp mô hình học được các đặc trưng chung, từ đó cải thiện hiệu quả huấn luyện và giảm nguy cơ quá khớp. So với các mô hình huấn luyện riêng lẻ cho từng thuộc tính, StarGAN có khả năng tổng quát hóa tốt hơn và dễ dàng mở rộng khi bổ sung thuộc tính mới.
+
+\subsection{Các biến thể và nghiên cứu mở rộng từ StarGAN}
+
+Sau khi StarGAN được công bố, nhiều nghiên cứu đã tiếp tục mở rộng và cải tiến mô hình này. StarGAN v2 được đề xuất nhằm khắc phục hạn chế về tính đa dạng của ảnh sinh, bằng cách đưa vào khái niệm style embedding và cho phép sinh ra nhiều kết quả khác nhau cho cùng một thuộc tính \cite{Choi2020StarGANv2}. Thay vì chỉ học ánh xạ giữa các miền, StarGAN v2 còn học phân phối phong cách trong từng miền, giúp ảnh sinh đa dạng và tự nhiên hơn.
+
+Bên cạnh đó, một số nghiên cứu kết hợp StarGAN với các ràng buộc ngữ nghĩa hoặc mặt nạ không gian để kiểm soát tốt hơn vùng ảnh bị chỉnh sửa. Những hướng tiếp cận này đặc biệt hữu ích trong việc giảm nhiễu và tránh thay đổi không mong muốn ở các vùng không liên quan đến thuộc tính mục tiêu.
+
+\subsection{Đánh giá tổng quan}
+
+Từ góc độ nghiên cứu và ứng dụng, StarGAN được xem là một trong những mô hình nền tảng cho bài toán thay đổi thuộc tính khuôn mặt đa miền. Mô hình này không chỉ giải quyết hiệu quả vấn đề mở rộng mà còn đặt nền móng cho nhiều hướng nghiên cứu tiếp theo. Tuy nhiên, StarGAN vẫn tồn tại một số hạn chế, chẳng hạn như chất lượng ảnh suy giảm khi chỉnh sửa nhiều thuộc tính đồng thời hoặc khó kiểm soát mức độ thay đổi của từng thuộc tính.
+
+Dù vậy, với sự cân bằng hợp lý giữa độ phức tạp, hiệu quả và khả năng mở rộng, StarGAN vẫn là lựa chọn phù hợp cho nhiều bài toán thực tế. Trong phạm vi đồ án này, StarGAN được lựa chọn làm mô hình cốt lõi để triển khai và đánh giá, đồng thời làm nền tảng cho việc xây dựng ứng dụng thử nghiệm trong các chương tiếp theo.
+
+
+Chương này đã trình bày chi tiết mô hình StarGAN, từ bối cảnh ra đời, kiến trúc, các hàm mất mát cho đến những ưu điểm và hướng mở rộng liên quan. Qua đó có thể thấy StarGAN là một bước tiến quan trọng trong bài toán thay đổi thuộc tính khuôn mặt đa miền. Những phân tích lý thuyết trong chương này là cơ sở để đi vào phần phân tích thiết kế hệ thống và pipeline huấn luyện mô hình, sẽ được trình bày trong Chương~\ref{chapter:3}.
+
+
+
+
+
+\section{Các chỉ số đánh giá chất lượng ảnh sinh}
+\label{section:2.5}
+
+Đánh giá chất lượng ảnh sinh là một vấn đề quan trọng và không hề đơn giản trong các mô hình sinh ảnh nói chung và các mô hình GAN nói riêng. Khác với các bài toán phân loại hay hồi quy, đầu ra của bài toán sinh ảnh không có một nhãn “đúng” duy nhất để so sánh trực tiếp. Do đó, việc đánh giá chất lượng ảnh sinh thường dựa trên các chỉ số thống kê hoặc các độ đo phản ánh mức độ tương đồng giữa ảnh sinh và ảnh thật, cả về mặt cấu trúc lẫn phân bố dữ liệu. Trong phạm vi đồ án này, hai chỉ số được sử dụng để đánh giá mô hình là chỉ số tương đồng cấu trúc SSIM và chỉ số khoảng cách phân bố FID, đây cũng là hai chỉ số phổ biến và có ý nghĩa thực tiễn cao trong lĩnh vực sinh ảnh.
+
+\subsection{Chỉ số tương đồng cấu trúc SSIM}
+
+Chỉ số SSIM được đề xuất nhằm đánh giá mức độ tương đồng giữa hai ảnh dựa trên cách con người cảm nhận chất lượng ảnh, thay vì chỉ so sánh sai khác điểm ảnh đơn thuần. Ý tưởng cốt lõi của SSIM là cho rằng hệ thống thị giác của con người nhạy cảm hơn với sự thay đổi về cấu trúc của ảnh so với các sai khác tuyệt đối về cường độ sáng.
+
+Về mặt toán học, SSIM đánh giá sự tương đồng giữa hai ảnh $x$ và $y$ thông qua ba thành phần: độ sáng (luminance), độ tương phản (contrast) và cấu trúc (structure). Chỉ số SSIM được định nghĩa như sau~\cite{wang2004ssim}:
+\[
+\text{SSIM}(x, y) = [l(x,y)]^\alpha \cdot [c(x,y)]^\beta \cdot [s(x,y)]^\gamma
+\]
+trong đó $l(x,y)$, $c(x,y)$ và $s(x,y)$ lần lượt biểu diễn độ tương đồng về độ sáng, độ tương phản và cấu trúc giữa hai ảnh. Trong thực tế, các tham số $\alpha$, $\beta$, $\gamma$ thường được đặt bằng 1 để đơn giản hóa công thức.
+
+Cụ thể, các thành phần này được xác định như sau~\cite{wang2004ssim}:
+\[
+l(x,y) = \frac{2\mu_x \mu_y + C_1}{\mu_x^2 + \mu_y^2 + C_1}
+\]
+\[
+c(x,y) = \frac{2\sigma_x \sigma_y + C_2}{\sigma_x^2 + \sigma_y^2 + C_2}
+\]
+\[
+s(x,y) = \frac{\sigma_{xy} + C_3}{\sigma_x \sigma_y + C_3}
+\]
+trong đó $\mu_x, \mu_y$ là giá trị trung bình, $\sigma_x, \sigma_y$ là độ lệch chuẩn và $\sigma_{xy}$ là hiệp phương sai của hai ảnh $x$ và $y$. Các hằng số $C_1, C_2, C_3$ được đưa vào nhằm tránh hiện tượng chia cho 0 khi các mẫu có giá trị nhỏ.
+
+Giá trị của SSIM nằm trong khoảng $[-1, 1]$, tuy nhiên trong thực tế thường nằm trong khoảng $[0, 1]$, với giá trị càng gần 1 thì hai ảnh càng tương đồng về mặt cấu trúc. Trong bài toán thay đổi thuộc tính khuôn mặt, SSIM thường được sử dụng để đánh giá mức độ bảo toàn danh tính và cấu trúc khuôn mặt gốc sau khi thực hiện biến đổi thuộc tính. Một mô hình tốt cần tạo ra ảnh có SSIM cao so với ảnh đầu vào, cho thấy rằng các đặc trưng không liên quan đến thuộc tính cần thay đổi vẫn được giữ lại.
+
+Tuy nhiên, SSIM cũng tồn tại một số hạn chế. Chỉ số này yêu cầu ảnh sinh và ảnh gốc phải có sự tương ứng từng cặp, do đó không phản ánh được chất lượng tổng thể của phân bố ảnh sinh. Ngoài ra, SSIM không đánh giá được mức độ đa dạng của ảnh sinh, mà chỉ tập trung vào sự tương đồng cục bộ giữa hai ảnh cụ thể.
+
+\subsection{Chỉ số Fréchet Inception Distance (FID)}
+
+Khác với SSIM, chỉ số FID (Fréchet Inception Distance) được thiết kế để đánh giá sự tương đồng giữa hai phân bố ảnh: phân bố ảnh thật và phân bố ảnh sinh. FID được xem là một trong những chỉ số đánh giá chất lượng ảnh sinh hiệu quả và đáng tin cậy nhất hiện nay, đặc biệt trong các nghiên cứu về GAN.
+
+Ý tưởng chính của FID là ánh xạ ảnh vào không gian đặc trưng có ý nghĩa ngữ nghĩa cao bằng cách sử dụng một mạng Inception v3 đã được huấn luyện trước trên tập ImageNet. Các đặc trưng trích xuất từ lớp trung gian của mạng này được giả định tuân theo phân bố Gaussian đa biến. Khi đó, khoảng cách Fréchet giữa hai phân bố Gaussian tương ứng với ảnh thật và ảnh sinh được tính như sau~\cite{heusel2017fid}:
+\[
+\text{FID} = \|\mu_r - \mu_g\|^2 + \text{Tr}\left(\Sigma_r + \Sigma_g - 2(\Sigma_r \Sigma_g)^{1/2}\right)
+\]
+trong đó $(\mu_r, \Sigma_r)$ và $(\mu_g, \Sigma_g)$ lần lượt là vector trung bình và ma trận hiệp phương sai của đặc trưng ảnh thật và ảnh sinh.
+
+Giá trị FID càng nhỏ thì phân bố ảnh sinh càng gần với phân bố ảnh thật, đồng nghĩa với việc ảnh sinh có chất lượng cao và đa dạng tốt. Trong bài toán thay đổi thuộc tính khuôn mặt, FID không chỉ phản ánh mức độ chân thực của ảnh sinh mà còn gián tiếp đánh giá khả năng mô hình học được phân bố dữ liệu khuôn mặt thực tế.
+
+Một ưu điểm lớn của FID là khả năng đánh giá đồng thời cả chất lượng và độ đa dạng của ảnh sinh, điều mà các chỉ số dựa trên so sánh từng cặp ảnh như SSIM không làm được. Tuy nhiên, FID cũng có một số hạn chế nhất định. Kết quả FID phụ thuộc vào số lượng mẫu đánh giá và có thể bị ảnh hưởng bởi nhiễu thống kê khi tập mẫu quá nhỏ. Ngoài ra, việc sử dụng mạng Inception được huấn luyện trên ImageNet cũng có thể chưa hoàn toàn phù hợp với các miền dữ liệu đặc thù như khuôn mặt.
+
+
+Trong đồ án này, SSIM và FID được sử dụng kết hợp nhằm đánh giá mô hình một cách toàn diện. SSIM phản ánh mức độ bảo toàn cấu trúc và danh tính khuôn mặt khi thay đổi thuộc tính, trong khi FID đánh giá chất lượng tổng thể và độ chân thực của ảnh sinh ở cấp độ phân bố. Việc phân tích đồng thời hai chỉ số này cho phép đưa ra nhận định khách quan hơn về hiệu quả của mô hình StarGAN trong bài toán thay đổi thuộc tính khuôn mặt.
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

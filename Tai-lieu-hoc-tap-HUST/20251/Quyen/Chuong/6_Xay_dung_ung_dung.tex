@@ -1,0 +1,138 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Sau quá trình huấn luyện, đánh giá và lựa chọn mô hình phù hợp ở các chương trước, đặc biệt là việc xác định checkpoint tối ưu tại mốc 500\,000 vòng lặp huấn luyện, chương này tập trung vào việc xây dựng một ứng dụng minh họa nhằm khai thác kết quả của mô hình StarGAN trong một kịch bản sử dụng thực tế. 
+
+Mục tiêu của chương không chỉ dừng lại ở việc trình diễn khả năng sinh ảnh của mô hình, mà còn cho thấy tính khả dụng của hệ thống khi tích hợp vào một pipeline hoàn chỉnh, từ tiếp nhận dữ liệu đầu vào, xử lý tiền xử lý, sinh ảnh với các thuộc tính khuôn mặt mong muốn, cho đến trả về kết quả trực quan cho người dùng cuối. Ứng dụng được xây dựng theo hướng gọn nhẹ, dễ sử dụng và phù hợp cho mục đích trình diễn, thử nghiệm cũng như mở rộng trong các nghiên cứu hoặc sản phẩm sau này.
+
+\section{Chức năng của ứng dụng}
+\label{section:6.1}
+
+Ứng dụng được xây dựng nhằm minh họa trực tiếp khả năng thay đổi thuộc tính khuôn mặt của mô hình StarGAN đã huấn luyện. Về mặt chức năng, ứng dụng đóng vai trò là một giao diện trung gian, cho phép người dùng tương tác với mô hình sinh ảnh mà không cần can thiệp trực tiếp vào mã nguồn huấn luyện hoặc các tham số nội bộ phức tạp (Minh họa trong Hình~\ref{fig:minh_hoa_chuc_nang_ung_dung}).
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\linewidth]{Hinhve/minh_hoa_chuc_nang_ung_dung.png}
+    \caption{Minh họa chức năng ứng dụng}
+    \label{fig:minh_hoa_chuc_nang_ung_dung}
+\end{figure}
+
+Đầu vào của ứng dụng là một ảnh khuôn mặt do người dùng cung cấp. Ảnh này có thể được chụp từ thiết bị cá nhân hoặc lấy từ các nguồn ảnh thông thường, với điều kiện khuôn mặt xuất hiện rõ ràng trong khung hình. Sau khi tiếp nhận ảnh đầu vào, hệ thống thực hiện các bước xử lý cần thiết để đưa ảnh về định dạng phù hợp với mô hình đã được huấn luyện.
+
+Bên cạnh ảnh đầu vào, người dùng lựa chọn một thuộc tính khuôn mặt mong muốn trong tập các thuộc tính đã được mô hình hỗ trợ, bao gồm các đặc trưng như kiểu tóc, giới tính, trạng thái biểu cảm hoặc các yếu tố trang điểm. Mỗi lựa chọn tương ứng với một hướng biến đổi cụ thể trong không gian thuộc tính mà StarGAN đã học được từ dữ liệu CelebA.
+
+Đầu ra của ứng dụng là một ảnh khuôn mặt đã được chỉnh sửa, trong đó thuộc tính được chọn đã được thay đổi theo hướng mong muốn, trong khi các đặc trưng còn lại của khuôn mặt gốc được giữ ở mức ổn định. Kết quả này cho phép người dùng quan sát trực quan hiệu quả của mô hình, đồng thời đánh giá chất lượng sinh ảnh trong bối cảnh sử dụng thực tế, thay vì chỉ thông qua các chỉ số định lượng như ở chương đánh giá.
+
+
+
+
+
+\section{Cốt lõi của ứng dụng}
+\label{section:6.2}
+
+Cốt lõi của ứng dụng được xây dựng dựa trên một pipeline xử lý ảnh áp dụng chung cho cả hai hình thức triển khai (ứng dụng web và chatbot trên telegram). Pipeline này bao gồm đầy đủ các bước từ tiếp nhận ảnh đầu vào, tiền xử lý, sinh ảnh bằng mô hình StarGAN cho đến hậu xử lý và trả kết quả cho người dùng (Hình~\ref{fig:cot_loi_ung_dung}). Sự khác biệt giữa các ứng dụng chỉ nằm ở cách tổ chức giao diện và môi trường triển khai, trong khi toàn bộ luồng xử lý chính được giữ nguyên.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Hinhve/cot_loi_ung_dung.png}
+    \caption{Các bước xử lý}
+    \label{fig:cot_loi_ung_dung}
+\end{figure}
+
+\subsection*{Tiếp nhận ảnh đầu vào}
+
+Ứng dụng cho phép người dùng tải lên một ảnh chân dung chứa khuôn mặt người. Ảnh đầu vào được tiếp nhận dưới dạng tệp ảnh chuẩn (JPEG hoặc PNG) và được lưu tạm thời trong hệ thống để phục vụ cho các bước xử lý tiếp theo. Trong quá trình này, thư viện \texttt{OpenCV} được sử dụng để đọc và chuyển đổi ảnh sang định dạng mảng số (numpy array), đảm bảo khả năng xử lý linh hoạt và hiệu quả.
+
+\subsection*{Phát hiện và cắt khuôn mặt}
+
+Sau khi ảnh được tải lên, bước đầu tiên trong pipeline là phát hiện khuôn mặt. Ứng dụng sử dụng thư viện \texttt{MediaPipe Face Detection} để xác định vị trí khuôn mặt trong ảnh đầu vào. MediaPipe được lựa chọn nhờ khả năng phát hiện khuôn mặt nhanh, ổn định và hoạt động tốt trong nhiều điều kiện ánh sáng khác nhau.
+
+Dựa trên hộp giới hạn (bounding box) do MediaPipe trả về, vùng khuôn mặt được cắt ra khỏi ảnh gốc. Để đảm bảo giữ lại đầy đủ các đặc trưng cần thiết (tóc, cằm, trán), hộp giới hạn được mở rộng thêm một tỷ lệ nhất định so với kích thước ban đầu. Việc mở rộng này giúp giảm hiện tượng mất thông tin khi đưa ảnh vào mô hình sinh.
+
+\subsection*{Chuẩn hóa kích thước và định dạng ảnh}
+
+Ảnh khuôn mặt sau khi cắt được chuẩn hóa về kích thước theo đúng yêu cầu của tập dữ liệu CelebA, cụ thể là kích thước $178 \times 218$ pixel. Đây là bước quan trọng nhằm đảm bảo sự tương thích giữa ảnh đầu vào và mô hình StarGAN đã được huấn luyện.
+
+Quá trình chuẩn hóa được thực hiện bằng thư viện \texttt{OpenCV}, kết hợp với các phép nội suy để hạn chế biến dạng hình học. Ảnh sau đó được lưu lại trong thư mục dữ liệu để mô hình StarGAN có thể đọc trực tiếp trong chế độ suy luận (test mode).
+
+\subsection*{Sinh ảnh bằng mô hình StarGAN}
+
+Ở bước cốt lõi nhất của pipeline, mô hình StarGAN v1 được sử dụng để thực hiện bài toán thay đổi thuộc tính khuôn mặt. Mô hình được triển khai thông qua mã nguồn gốc từ repository chính thức và chạy ở chế độ \texttt{test}. 
+
+StarGAN nhận vào ảnh khuôn mặt đã chuẩn hóa cùng với vector thuộc tính mục tiêu, trong đó mỗi thuộc tính biểu diễn một đặc điểm khuôn mặt cụ thể (ví dụ: hói đầu, đeo kính, mỉm cười, đánh son, \ldots). Với mỗi thuộc tính, mô hình sinh ra một ảnh tương ứng, đảm bảo chỉ thay đổi đặc điểm được chỉ định trong khi vẫn giữ nguyên danh tính khuôn mặt.
+
+Kết quả đầu ra của mô hình là một ảnh tổng hợp, trong đó bao gồm ảnh gốc và các ảnh sinh tương ứng với từng thuộc tính. Ảnh này sau đó được tách thành các phần riêng lẻ để phục vụ cho bước xử lý tiếp theo.
+
+\subsection*{Xử lý và lựa chọn ảnh sinh}
+
+Ảnh tổng hợp đầu ra từ StarGAN được chia thành các ảnh con, mỗi ảnh biểu diễn kết quả thay đổi của một thuộc tính khuôn mặt. Trong pipeline, thư viện \texttt{OpenCV} và \texttt{PIL} được sử dụng để cắt, chuyển đổi và lưu trữ các ảnh này.
+
+Dựa trên lựa chọn của người dùng (ví dụ: chọn một thuộc tính cụ thể trong giao diện), hệ thống sẽ trích xuất đúng ảnh tương ứng và chuyển sang bước hậu xử lý.
+
+\subsection*{Định vị và ghép ảnh vào ảnh gốc}
+
+Để tạo ra kết quả trực quan và tự nhiên, ảnh khuôn mặt sinh ra cần được ghép ngược trở lại ảnh gốc ban đầu. Do kích thước và tỷ lệ ảnh có thể đã thay đổi, hệ thống sử dụng kỹ thuật khớp đặc trưng (feature matching) dựa trên thuật toán ORB để xác định vị trí chính xác của khuôn mặt trong ảnh gốc.
+
+Sau khi xác định được vùng tương ứng, ảnh khuôn mặt sinh được co giãn và chồng lên ảnh gốc tại đúng vị trí. Quá trình này giúp giữ nguyên bối cảnh xung quanh (nền, trang phục) và chỉ thay đổi khuôn mặt, từ đó nâng cao tính trực quan của kết quả.
+
+\subsection*{Trả kết quả cho người dùng}
+
+Ảnh sau khi ghép hoàn chỉnh được chuyển sang định dạng phù hợp để hiển thị. Trong ứng dụng web, ảnh được chuyển đổi sang định dạng \texttt{PIL Image} và hiển thị trực tiếp trên giao diện thông qua thư viện \texttt{Gradio}. Người dùng có thể xem kết quả ngay sau khi chọn thuộc tính mong muốn.
+
+Tổng thể pipeline trên đảm bảo tính thống nhất, dễ mở rộng và có thể tái sử dụng cho nhiều nền tảng khác nhau, đồng thời tận dụng hiệu quả các thư viện mã nguồn mở phổ biến trong xử lý ảnh và học sâu.
+
+
+
+
+
+
+\section{Xây dựng chatbot sử dụng mô hình được huấn luyện}
+\label{section:6.3}
+
+Dựa trên pipeline xử lý cốt lõi đã được trình bày ở Mục~\ref{section:6.2}, mô hình StarGAN sau huấn luyện được tích hợp vào một ứng dụng chatbot trên nền tảng Telegram nhằm minh họa khả năng ứng dụng thực tế của hệ thống. Việc lựa chọn Telegram xuất phát từ các ưu điểm như khả năng triển khai nhanh, hỗ trợ tốt cho việc truyền nhận ảnh, giao diện tương tác thân thiện và mức độ phổ biến cao đối với người dùng cuối.
+
+Về mặt kiến trúc, chatbot được xây dựng theo mô hình client--server, trong đó Telegram đóng vai trò là giao diện tương tác phía người dùng, còn toàn bộ logic xử lý được triển khai tại phía máy chủ. Bot Telegram có nhiệm vụ tiếp nhận ảnh đầu vào và lựa chọn thuộc tính từ người dùng, sau đó chuyển dữ liệu này về máy chủ để xử lý. Các bước tiền xử lý ảnh, sinh ảnh bằng mô hình StarGAN và hậu xử lý kết quả đều được thực hiện hoàn toàn ở phía server, đảm bảo khả năng kiểm soát tài nguyên tính toán cũng như tính ổn định của hệ thống.
+
+Quá trình xây dựng chatbot bắt đầu bằng việc đăng ký bot thông qua dịch vụ \textit{BotFather} của Telegram để nhận \textit{API Token}. Token này cho phép máy chủ giao tiếp với Telegram thông qua Telegram Bot API. Trên phía server, một thư viện Python chuyên dụng cho Telegram được sử dụng để lắng nghe và xử lý các sự kiện gửi tin nhắn, đặc biệt là tin nhắn chứa ảnh, đồng thời quản lý luồng hội thoại và phản hồi kết quả cho người dùng. Trong phạm vi triển khai của đồ án, cơ chế \textit{long polling} được ưu tiên sử dụng do cấu hình đơn giản và phù hợp với môi trường thử nghiệm.
+
+Luồng tương tác giữa người dùng và chatbot được thiết kế theo hướng tối giản. Người dùng gửi một ảnh chân dung chứa khuôn mặt người tới chatbot, sau đó lựa chọn một thuộc tính khuôn mặt cần thay đổi thông qua danh sách các thuộc tính được bot cung cấp. Ngay khi nhận được ảnh đầu vào, chatbot tải ảnh về máy chủ và chuyển ảnh này vào pipeline xử lý cốt lõi. Pipeline này bao gồm các bước phát hiện khuôn mặt bằng thư viện MediaPipe, cắt và mở rộng vùng khuôn mặt, chuẩn hóa kích thước ảnh theo định dạng của bộ dữ liệu CelebA, sinh ảnh bằng mô hình StarGAN đã được huấn luyện với checkpoint tối ưu, và cuối cùng ghép khuôn mặt đã chỉnh sửa trở lại ảnh gốc.
+
+Thuộc tính khuôn mặt do người dùng lựa chọn được ánh xạ trực tiếp tới vector điều kiện đầu vào của StarGAN. Mỗi lựa chọn tương ứng với một hướng biến đổi cụ thể trong không gian thuộc tính, đảm bảo rằng mô hình chỉ thay đổi thuộc tính mong muốn trong khi vẫn giữ được các đặc trưng nhận dạng chính của khuôn mặt. Việc tái sử dụng trực tiếp pipeline đã xây dựng giúp chatbot kế thừa đầy đủ chất lượng sinh ảnh và tính ổn định của hệ thống, đồng thời giảm thiểu đáng kể công sức phát triển.
+
+Sau khi quá trình sinh ảnh hoàn tất, chatbot gửi ảnh kết quả về cho người dùng dưới dạng ảnh tiêu chuẩn của Telegram, kèm theo mô tả ngắn gọn về thuộc tính đã được áp dụng. Thiết kế này hướng tới trải nghiệm người dùng trực quan, không yêu cầu kiến thức chuyên sâu về trí tuệ nhân tạo hay xử lý ảnh, trong khi toàn bộ quá trình xử lý phức tạp được ẩn phía sau hệ thống.
+
+Việc triển khai chatbot Telegram cho thấy mô hình StarGAN sau huấn luyện không chỉ dừng lại ở mức nghiên cứu học thuật mà hoàn toàn có thể tích hợp vào các ứng dụng tương tác thực tế. Với cùng một cốt lõi xử lý, hệ thống có thể dễ dàng mở rộng sang các nền tảng khác như ứng dụng web hoặc ứng dụng di động, chỉ bằng cách thay đổi lớp giao diện và cơ chế giao tiếp với người dùng. Qua đó, chatbot đóng vai trò như một minh chứng rõ ràng cho tính ứng dụng và khả năng triển khai thực tiễn của mô hình được đề xuất trong đồ án.
+
+
+
+
+
+
+
+
+\section{Xây dựng web site sử dụng mô hình được huấn luyện}
+\label{section:6.4}
+
+Bên cạnh hình thức triển khai dưới dạng chatbot, mô hình StarGAN sau khi huấn luyện cũng được tích hợp vào một ứng dụng web nhằm cung cấp giao diện trực quan hơn cho người dùng cuối. Ứng dụng web cho phép người dùng tương tác trực tiếp với hệ thống thông qua trình duyệt, không phụ thuộc vào nền tảng nhắn tin, đồng thời phù hợp cho mục đích trình diễn, kiểm thử và mở rộng trong tương lai.
+
+Về tổng thể, website được xây dựng dựa trên cùng pipeline xử lý cốt lõi đã trình bày trong Mục~\ref{section:6.2}. Sự khác biệt chính nằm ở lớp giao diện và cơ chế tương tác với người dùng. Thay vì nhận dữ liệu đầu vào từ tin nhắn Telegram, hệ thống web tiếp nhận ảnh thông qua chức năng tải ảnh (upload) và lựa chọn thuộc tính khuôn mặt thông qua các thành phần giao diện đồ họa.
+
+Cụ thể, ứng dụng web được triển khai bằng thư viện Gradio, một framework hỗ trợ xây dựng nhanh các giao diện web cho mô hình học sâu. Gradio cho phép kết nối trực tiếp giữa giao diện người dùng và các hàm xử lý Python, nhờ đó quá trình tích hợp mô hình StarGAN trở nên đơn giản và linh hoạt. Người dùng chỉ cần tải lên một ảnh khuôn mặt và chọn một thuộc tính mong muốn trong danh sách các thuộc tính hỗ trợ; hệ thống sẽ tự động kích hoạt pipeline xử lý phía sau và trả về kết quả tương ứng.
+
+Quy trình xử lý trong website có thể được mô tả theo các bước sau. Trước hết, ảnh đầu vào do người dùng tải lên được lưu tạm thời trên máy chủ và chuyển vào pipeline tiền xử lý. Tại đây, thư viện MediaPipe được sử dụng để phát hiện khuôn mặt trong ảnh và xác định vùng bao quanh khuôn mặt. Vùng này được cắt ra, mở rộng theo một tỷ lệ nhất định để đảm bảo giữ lại các đặc trưng cần thiết, sau đó được chuẩn hóa kích thước theo định dạng dữ liệu huấn luyện của CelebA.
+
+Tiếp theo, ảnh khuôn mặt đã chuẩn hóa được đưa vào mô hình StarGAN đã huấn luyện sẵn, với checkpoint được lựa chọn là checkpoint tại 500\,000 vòng lặp huấn luyện. Việc sử dụng checkpoint này dựa trên kết quả đánh giá ở Chương~5, trong đó mô hình đạt giá trị FID thấp nhất và chất lượng ảnh sinh ổn định nhất. StarGAN thực hiện sinh ra một tập các ảnh tương ứng với các thuộc tính khuôn mặt khác nhau, trong đó mỗi ảnh biểu diễn sự thay đổi của một thuộc tính cụ thể so với ảnh gốc.
+
+Sau khi quá trình sinh ảnh hoàn tất, hệ thống lựa chọn ảnh tương ứng với thuộc tính mà người dùng đã chọn trên giao diện web. Ảnh sinh này sau đó được xử lý hậu kỳ để ghép ngược trở lại ảnh gốc. Quá trình ghép sử dụng các phép biến đổi hình học nhằm đảm bảo vị trí và tỷ lệ khuôn mặt sinh ra phù hợp với ảnh ban đầu, từ đó tạo ra kết quả cuối cùng có tính tự nhiên cao.
+
+Cuối cùng, ảnh kết quả được chuyển đổi về định dạng phù hợp để hiển thị trên trình duyệt và trả về cho người dùng thông qua giao diện Gradio. Toàn bộ quá trình, từ lúc người dùng tải ảnh đến khi nhận được ảnh kết quả, được thực hiện một cách tự động và gần như theo thời gian thực, mang lại trải nghiệm tương tác trực quan và thuận tiện.
+
+Như vậy, việc xây dựng website sử dụng mô hình đã huấn luyện không chỉ giúp minh họa rõ ràng khả năng của StarGAN trong bài toán thay đổi thuộc tính khuôn mặt, mà còn chứng minh tính ứng dụng thực tiễn của mô hình trong các hệ thống tương tác trực tiếp với người dùng. Đồng thời, cách triển khai này cho thấy pipeline cốt lõi có thể dễ dàng được tái sử dụng và mở rộng sang nhiều nền tảng khác nhau mà không cần thay đổi bản chất của mô hình.
+
+
+
+
+
+
+
+\end{document}

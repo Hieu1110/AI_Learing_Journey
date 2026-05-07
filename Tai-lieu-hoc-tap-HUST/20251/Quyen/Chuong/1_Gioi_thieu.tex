@@ -1,0 +1,48 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+\section{Đặt vấn đề}
+\label{section:1.1}
+Trong những năm gần đây, cùng với sự phát triển mạnh mẽ của công nghệ thông tin và trí tuệ nhân tạo, các ứng dụng xử lý và phân tích hình ảnh ngày càng trở nên phổ biến và đóng vai trò quan trọng trong nhiều lĩnh vực của đời sống. Đặc biệt, bài toán xử lý và chỉnh sửa ảnh khuôn mặt đang nhận được sự quan tâm lớn từ cả giới nghiên cứu lẫn cộng đồng người dùng, do khuôn mặt là một trong những đối tượng mang tính nhận diện cao và gắn liền với nhiều ứng dụng thực tiễn như mạng xã hội, giải trí, thương mại điện tử, an ninh – giám sát và truyền thông đa phương tiện.
+
+Trong thực tế, nhu cầu thay đổi hoặc điều chỉnh một số thuộc tính trên khuôn mặt, chẳng hạn như kiểu tóc, giới tính, biểu cảm hay phong cách trang điểm, xuất hiện ngày càng nhiều. Các công cụ chỉnh sửa ảnh truyền thống thường đòi hỏi người dùng có kỹ năng chuyên môn, thao tác thủ công phức tạp và khó đảm bảo tính tự nhiên cũng như nhất quán của khuôn mặt sau khi chỉnh sửa. Điều này gây ra không ít hạn chế khi áp dụng trên quy mô lớn hoặc trong các hệ thống tự động.
+
+Bên cạnh đó, với sự bùng nổ của dữ liệu hình ảnh và sự phát triển của các nền tảng trực tuyến, việc xây dựng các hệ thống có khả năng tự động xử lý, biến đổi và tạo ra hình ảnh khuôn mặt một cách linh hoạt, chân thực và hiệu quả đang trở thành một yêu cầu cấp thiết. Nếu bài toán này được giải quyết tốt, nó không chỉ giúp nâng cao trải nghiệm người dùng trong các ứng dụng chỉnh sửa ảnh, mà còn mở ra nhiều cơ hội ứng dụng trong các lĩnh vực khác như hỗ trợ sản xuất nội dung số, mô phỏng nhân vật, nghiên cứu hành vi thị giác, hay tạo dữ liệu huấn luyện cho các bài toán thị giác máy tính.
+
+Từ những yêu cầu và thách thức nêu trên, bài toán thay đổi thuộc tính khuôn mặt một cách tự động, đảm bảo giữ nguyên đặc trưng nhận dạng của khuôn mặt gốc đồng thời tạo ra các biến đổi hợp lý, tự nhiên, đang đặt ra nhiều vấn đề cần được nghiên cứu và đánh giá một cách nghiêm túc trong bối cảnh hiện nay.
+
+\section{Mục tiêu và phạm vi đề tài}
+\label{section:1.2}
+Từ những vấn đề đã nêu ở Mục \ref{section:1.1}, có thể thấy rằng nhu cầu thay đổi thuộc tính khuôn mặt một cách linh hoạt, tự nhiên và có khả năng kiểm soát đang ngày càng trở nên phổ biến trong nhiều lĩnh vực khác nhau.
+
+Các công trình nghiên cứu gần đây cho thấy các mô hình GAN đa miền có tiềm năng lớn trong việc giải quyết bài toán thay đổi nhiều thuộc tính khuôn mặt trên cùng một mô hình, thay vì phải huấn luyện riêng lẻ cho từng thuộc tính. Tuy nhiên, trong nhiều trường hợp, việc đánh giá chất lượng mô hình mới chỉ dừng lại ở quan sát trực quan, chưa đi kèm với các phân tích định lượng của ảnh sinh ra. Bên cạnh đó, không phải nghiên cứu nào cũng hướng tới việc xây dựng một ứng dụng hoàn chỉnh miễn phí hoàn toàn.
+
+Trên cơ sở đó, đồ án này hướng tới mục tiêu nghiên cứu và xây dựng một hệ thống thay đổi thuộc tính khuôn mặt dựa trên mô hình StarGAN, trong đó tập trung vào ba khía cạnh chính. Thứ nhất, tiến hành huấn luyện mô hình với nhiều thuộc tính khuôn mặt khác nhau nhằm khai thác khả năng biến đổi đa miền của StarGAN. Thứ hai, đánh giá chất lượng mô hình một cách định lượng thông qua các chỉ số phù hợp. Thứ ba, xây dựng một ứng dụng thử nghiệm cho phép người dùng tương tác với mô hình đã huấn luyện, qua đó minh họa khả năng ứng dụng của mô hình trong thực tế.
+
+Phạm vi của đề tài được giới hạn trong bài toán thay đổi thuộc tính khuôn mặt trên tập dữ liệu ảnh khuôn mặt phổ biến. Đồ án tập trung vào việc nghiên cứu, triển khai, đánh giá và ứng dụng mô hình ở mức độ một đồ án học tập và nghiên cứu, làm cơ sở cho các hướng phát triển sâu hơn trong tương lai, chưa đạt đến giá trị mà có thể đưa vào thị trường ứng dụng hoặc kinh doanh.
+
+\section{Định hướng giải pháp}
+\label{section:1.3}
+Xuất phát từ các mục tiêu và phạm vi đã xác định ở Mục \ref{section:1.2}, đồ án lựa chọn tiếp cận bài toán thay đổi thuộc tính khuôn mặt theo hướng sử dụng mô hình học sâu dựa trên GAN, cụ thể là mô hình StarGAN – một kiến trúc GAN đa miền cho phép xử lý nhiều thuộc tính trên cùng một mô hình thống nhất. Định hướng này được lựa chọn do StarGAN có khả năng thay đổi linh hoạt nhiều thuộc tính khuôn mặt khác nhau mà vẫn giữ được các đặc trưng nhận dạng chính, đồng thời giảm đáng kể chi phí huấn luyện so với việc xây dựng nhiều mô hình riêng lẻ cho từng thuộc tính.
+
+Trên cơ sở định hướng đó, giải pháp của đồ án tập trung vào việc huấn luyện mô hình StarGAN trên tập dữ liệu ảnh khuôn mặt với nhiều thuộc tính khác nhau (ở đồ án hiện tại là 17 thuộc tính khác nhau), từ đó tạo ra các ảnh khuôn mặt mới với thuộc tính được thay đổi theo yêu cầu. Bên cạnh việc huấn luyện, chất lượng ảnh sinh ra bởi mô hình được đánh giá một cách hệ thống thông qua cả quan sát trực quan và các chỉ số định lượng phù hợp. Cuối cùng, mô hình sau huấn luyện được tích hợp vào một ứng dụng thử nghiệm, cho phép người dùng trực tiếp trải nghiệm quá trình thay đổi thuộc tính khuôn mặt.
+
+Đồ án này đã xây dựng và triển khai thành công một quy trình hoàn chỉnh từ huấn luyện, đánh giá đến ứng dụng mô hình StarGAN cho bài toán thay đổi thuộc tính khuôn mặt. Kết quả đạt được cho thấy mô hình có khả năng biến đổi nhiều thuộc tính khác nhau với chất lượng ổn định. Bên cạnh đó, ứng dụng được xây dựng giúp minh họa tính khả thi của việc đưa mô hình vào sử dụng thực tế, tạo tiền đề cho các hướng phát triển và mở rộng trong tương lai.
+
+\section{Bố cục đồ án}
+\label{section:1.4}
+Phần còn lại của quyển đồ án tốt nghiệp này được tổ chức như sau.
+
+Chương 2 trình bày các cơ sở lý thuyết liên quan trực tiếp đến bài toán thay đổi thuộc tính khuôn mặt. Chương này sẽ giới thiệu tổng quan về xử lý ảnh và các khái niệm nền tảng thường được sử dụng trong lĩnh vực xử lý ảnh số. Tiếp đó, chương đi sâu vào mạng sinh đối kháng GAN, bao gồm nguyên lý hoạt động, cấu trúc cơ bản và các biến thể tiêu biểu. Trên cơ sở đó, bài toán thay đổi thuộc tính khuôn mặt được phân tích rõ hơn, làm tiền đề để giới thiệu mô hình StarGAN cùng các nghiên cứu liên quan. Cuối cùng, chương trình bày các chỉ số đánh giá chất lượng ảnh sinh, đóng vai trò quan trọng trong việc đánh giá kết quả huấn luyện và thực nghiệm ở các chương sau.
+
+Chương 3 tập trung vào phân tích và thiết kế hệ thống tổng thể của đồ án. Chương này mô tả kiến trúc chung của hệ thống. Tiếp theo, chương sẽ trình bày các bước trong quá trình huấn luyện mô hình và quá trình đánh giá, là tiền đề cho hai chương phân tích chi tiết phía sau.
+
+Chương 4 trình bày quá trình huấn luyện mô hình StarGAN trong đồ án. Nội dung chương bắt đầu với việc chuẩn bị dữ liệu và thiết lập các cấu hình cần thiết cho mô hình. Tiếp theo, quá trình triển khai huấn luyện được mô tả chi tiết.
+
+Chương 5 tập trung vào thực nghiệm và đánh giá mô hình sau huấn luyện. Chương này đều tiên sẽ trình bày môi trường thực nghiệm. Sau đó sẽ mô tả phương pháp đánh giá mô hình, kết hợp giữa đánh giá định tính và định lượng. Cuối chương sẽ so sánh các checkpoint từ quá trình huấn luyện nhằm làm rõ ảnh hưởng của quá trình huấn luyện đến chất lượng ảnh sinh ra.
+
+Chương 6 trình bày việc xây dựng ứng dụng thử nghiệm sử dụng mô hình đã được huấn luyện. Chương này mô tả các chức năng chính của ứng dụng, cũng như phần cốt lõi chung của việc tích hợp mô hình StarGAN vào hệ thống. Sau đó, sẽ trình bày việc xây dựng chatbot và website sử dụng mô hình được huấn luyện để nhằm minh họa khả năng ứng dụng thực tế của kết quả đồ án.
+
+Cuối cùng, chương 7 tổng kết các kết quả đạt được của đồ án. Chương này đưa ra các kết luận chính, chỉ ra những hạn chế còn tồn tại trong quá trình thực hiện, đồng thời đề xuất các hướng phát triển và mở rộng trong tương lai nhằm nâng cao hiệu quả và phạm vi ứng dụng của mô hình.
+
+\end{document}

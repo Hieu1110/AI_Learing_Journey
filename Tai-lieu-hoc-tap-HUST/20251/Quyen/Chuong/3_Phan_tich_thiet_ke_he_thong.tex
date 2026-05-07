@@ -1,0 +1,162 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Chương 2 đã trình bày cơ sở lý thuyết liên quan đến xử lý ảnh số, mạng sinh đối kháng GAN, bài toán thay đổi thuộc tính khuôn mặt, mô hình StarGAN cũng như các chỉ số đánh giá chất lượng ảnh sinh ra. Trên cơ sở các kiến thức nền tảng đó, chương này tập trung vào việc phân tích và thiết kế hệ thống cho bài toán thay đổi thuộc tính khuôn mặt dựa trên mô hình StarGAN.
+
+Mục tiêu của Chương 3 là mô tả một cách có hệ thống kiến trúc tổng thể, các thành phần chức năng chính và luồng xử lý dữ liệu trong toàn bộ hệ thống, từ giai đoạn huấn luyện mô hình cho đến giai đoạn sinh ảnh, đánh giá và triển khai ứng dụng. Nội dung chương đóng vai trò cầu nối giữa phần lý thuyết và các chương triển khai, thực nghiệm ở phía sau.
+
+
+
+\section{Kiến trúc tổng thể của hệ thống}
+\label{section:3.1}
+
+\subsection{Mô tả tổng quan}
+
+Hệ thống được xây dựng trong đồ án này nhằm mục tiêu thực hiện bài toán thay đổi thuộc tính khuôn mặt một cách linh hoạt, cho phép chỉnh sửa nhiều thuộc tính khác nhau trên cùng một ảnh đầu vào, đồng thời đảm bảo chất lượng ảnh sinh ra đạt mức chấp nhận được cả về mặt thị giác lẫn các chỉ số định lượng. Để đáp ứng yêu cầu đó, kiến trúc hệ thống được thiết kế theo hướng phân tầng, tách biệt rõ ràng giữa các khối chức năng, giúp việc huấn luyện, đánh giá và triển khai mô hình được thực hiện một cách độc lập nhưng vẫn đảm bảo tính liên kết tổng thể.
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{Hinhve/tong_quan_cac_khoi.png}
+    \caption{Tổng quan các khối}
+    \label{fig:tong_quan_cac_khoi}
+\end{figure}
+Về mặt tổng quát, hệ thống bao gồm ba khối chính: (i) khối chuẩn bị dữ liệu và tiền xử lý, (ii) khối huấn luyện và đánh giá mô hình StarGAN, và (iii) khối ứng dụng và triển khai mô hình đã huấn luyện (Hình ~\ref{fig:tong_quan_cac_khoi}). Mỗi khối đảm nhiệm một vai trò riêng biệt trong toàn bộ pipeline xử lý, từ dữ liệu thô ban đầu cho đến kết quả cuối cùng là ảnh khuôn mặt đã được thay đổi thuộc tính theo yêu cầu của người dùng.
+
+
+\subsection{Khối chuẩn bị dữ liệu và tiền xử lý}
+
+Khối chuẩn bị dữ liệu đóng vai trò nền tảng cho toàn bộ hệ thống. Đầu vào của khối này là tập dữ liệu ảnh khuôn mặt kèm theo nhãn thuộc tính, điển hình là các tập dữ liệu phổ biến như CelebA. Dữ liệu thô ban đầu thường có kích thước, tỷ lệ và chất lượng không đồng nhất, do đó cần được tiền xử lý trước khi đưa vào huấn luyện mô hình.
+
+Các bước tiền xử lý chính bao gồm chuẩn hóa kích thước ảnh, căn chỉnh khuôn mặt, chuẩn hóa giá trị pixel và chuyển đổi nhãn thuộc tính về dạng vector nhị phân phù hợp với đầu vào của mô hình StarGAN. Ngoài ra, dữ liệu cũng được chia thành các tập huấn luyện, tập kiểm tra và tập đánh giá nhằm đảm bảo tính khách quan trong quá trình huấn luyện và đánh giá mô hình.
+
+Việc thiết kế khối tiền xử lý độc lập giúp hệ thống dễ dàng mở rộng sang các tập dữ liệu khác trong tương lai mà không cần thay đổi cấu trúc của các khối xử lý phía sau.
+
+
+\subsection{Khối huấn luyện mô hình StarGAN}
+
+Khối huấn luyện là thành phần cốt lõi của hệ thống, nơi mô hình StarGAN được triển khai và tối ưu hóa. Khối này bao gồm mạng sinh (Generator), mạng phân biệt (Discriminator) và các hàm mất mát tương ứng đã được trình bày trong Chương 2. Dữ liệu sau tiền xử lý được đưa vào khối huấn luyện dưới dạng các cặp ảnh và vector thuộc tính mục tiêu.
+
+Trong quá trình huấn luyện, mô hình học cách sinh ra ảnh khuôn mặt mới sao cho vừa mang các thuộc tính mong muốn, vừa giữ được các đặc trưng nhận dạng quan trọng của ảnh gốc. Các checkpoint của mô hình được lưu lại định kỳ theo số vòng lặp huấn luyện (iteration) nhằm phục vụ cho việc đánh giá, so sánh và lựa chọn mô hình tối ưu.
+
+Khối huấn luyện được thiết kế để có thể chạy độc lập trên các nền tảng tính toán hiệu năng cao như GPU hoặc môi trường đám mây, điển hình là Kaggle hoặc Google Colab, giúp rút ngắn thời gian huấn luyện và thuận tiện cho việc thử nghiệm nhiều cấu hình khác nhau.
+
+
+\subsection{Khối ứng dụng và triển khai}
+
+Khối ứng dụng là lớp trên cùng của hệ thống, trực tiếp tương tác với người dùng cuối. Khối này sử dụng mô hình StarGAN đã được lựa chọn từ giai đoạn đánh giá để thực hiện sinh ảnh theo yêu cầu. Người dùng có thể cung cấp ảnh đầu vào và lựa chọn các thuộc tính cần thay đổi, hệ thống sẽ trả về ảnh kết quả tương ứng.
+
+Trong đồ án này, khối ứng dụng được triển khai dưới nhiều hình thức khác nhau, bao gồm chatbot và giao diện web, nhằm chứng minh khả năng ứng dụng thực tế của mô hình đã huấn luyện. Việc tách biệt rõ ràng khối ứng dụng khỏi khối huấn luyện giúp hệ thống có thể dễ dàng bảo trì, nâng cấp hoặc thay thế mô hình mà không ảnh hưởng đến giao diện người dùng.
+
+
+Tóm lại, kiến trúc tổng thể của hệ thống được thiết kế theo hướng mô-đun, phân tách rõ ràng các khối chức năng từ dữ liệu, huấn luyện, đánh giá cho đến triển khai ứng dụng. Cách tiếp cận này không chỉ giúp hệ thống hoạt động ổn định và dễ mở rộng mà còn tạo tiền đề thuận lợi cho việc phân tích, đánh giá và cải tiến mô hình trong các chương tiếp theo. Trên cơ sở kiến trúc đã đề xuất, các pipeline huấn luyện và sinh ảnh cụ thể sẽ được trình bày chi tiết trong các mục tiếp theo của Chương 3.
+
+
+
+
+
+\section{Thiết kế pipeline huấn luyện mô hình}
+\label{section:3.2}
+
+Tiếp nối kiến trúc tổng thể của hệ thống đã được trình bày trong Mục~\ref{section:3.1}, phần này tập trung mô tả chi tiết pipeline huấn luyện mô hình StarGAN được sử dụng trong đồ án. Pipeline huấn luyện đóng vai trò trung tâm trong toàn bộ hệ thống, quyết định trực tiếp đến chất lượng ảnh sinh ra cũng như khả năng thay đổi chính xác các thuộc tính khuôn mặt theo yêu cầu. Việc thiết kế pipeline một cách hợp lý giúp đảm bảo quá trình huấn luyện ổn định, có khả năng mở rộng, thuận tiện cho việc đánh giá và so sánh các checkpoint trong các giai đoạn khác nhau.
+
+\subsection{Tổng quan pipeline huấn luyện}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{Hinhve/pipeline_huan_luyen.png}
+    \caption{Các giai đoạn trong quá trình huấn luyện}
+    \label{fig:pipeline_huan_luyen}
+\end{figure}
+Pipeline huấn luyện mô hình trong đồ án được thiết kế theo hướng tuần tự và khép kín, bao gồm các bước chính: tổ chức lại dữ liệu đã chuẩn bị, tiền xử lý và mã hóa nhãn thuộc tính, huấn luyện đồng thời hai mạng sinh (Generator) và phân biệt (Discriminator), lưu checkpoint định kỳ, và ghi nhận các thông tin phục vụ đánh giá mô hình (Hình ~\ref{fig:pipeline_huan_luyen}). Mỗi bước trong pipeline đều được xây dựng với mục tiêu đảm bảo tính nhất quán giữa dữ liệu, nhãn và mô hình, đồng thời hỗ trợ việc phân tích kết quả sau huấn luyện.
+
+Khác với các pipeline huấn luyện GAN truyền thống chỉ tập trung vào việc sinh ảnh, pipeline trong đồ án được mở rộng để phục vụ bài toán thay đổi nhiều thuộc tính khuôn mặt trên cùng một mô hình duy nhất. Do đó, ngoài mục tiêu sinh ảnh chân thực, pipeline còn phải đảm bảo rằng các thuộc tính mục tiêu được thay đổi chính xác, trong khi các đặc trưng không liên quan của khuôn mặt được giữ nguyên.
+
+\subsection{Tổ chức dữ liệu huấn luyện}
+
+Dữ liệu huấn luyện được tổ chức theo cấu trúc phù hợp với yêu cầu của StarGAN, bao gồm ảnh khuôn mặt và vector nhãn biểu diễn các thuộc tính tương ứng. Mỗi ảnh đầu vào được gán một vector nhị phân, trong đó mỗi phần tử biểu thị sự có hoặc không có của một thuộc tính khuôn mặt cụ thể (ví dụ: giới tính, đeo kính, râu, mỉm cười, v.v.).
+
+Trong pipeline huấn luyện, dữ liệu được chia thành các minibatch, mỗi minibatch bao gồm ảnh gốc và nhãn thuộc tính ban đầu. Đồng thời, một nhãn thuộc tính mục tiêu mới được sinh ngẫu nhiên cho mỗi ảnh, đại diện cho các thuộc tính mà mô hình cần thay đổi trong lần sinh ảnh đó. Cách tiếp cận này cho phép mô hình học được nhiều ánh xạ thuộc tính khác nhau trong quá trình huấn luyện, từ đó nâng cao khả năng tổng quát hóa.
+
+
+Trước khi đưa vào mô hình, ảnh khuôn mặt được chuẩn hóa về cùng kích thước và không gian màu thống nhất. Việc chuẩn hóa này giúp giảm sự khác biệt không cần thiết giữa các mẫu dữ liệu, đồng thời hỗ trợ quá trình hội tụ của mô hình trong huấn luyện sâu. Các phép tiền xử lý thường bao gồm thay đổi kích thước ảnh, chuẩn hóa giá trị pixel về một khoảng cố định, và có thể áp dụng một số phép biến đổi dữ liệu cơ bản nhằm tăng tính đa dạng của tập huấn luyện.
+
+Đối với nhãn thuộc tính, pipeline đảm bảo rằng các vector nhãn được biểu diễn nhất quán về thứ tự và ý nghĩa của từng chiều. Điều này đặc biệt quan trọng trong bối cảnh huấn luyện đa thuộc tính, bởi bất kỳ sự sai lệch nào trong ánh xạ giữa nhãn và thuộc tính đều có thể dẫn đến kết quả sinh ảnh không chính xác.
+
+\subsection{Huấn luyện mô hình}
+
+Trong pipeline huấn luyện, Generator và Discriminator được huấn luyện đồng thời theo cơ chế đối kháng. Ở mỗi vòng lặp, Discriminator trước tiên được cập nhật để phân biệt giữa ảnh thật và ảnh sinh, đồng thời dự đoán các thuộc tính khuôn mặt của ảnh đầu vào. Sau đó, Generator được cập nhật nhằm sinh ra ảnh mới vừa có tính chân thực cao, vừa mang các thuộc tính mục tiêu mong muốn, đồng thời đánh lừa được Discriminator.
+
+Pipeline được thiết kế để kiểm soát số lần cập nhật của từng mạng trong mỗi vòng huấn luyện, từ đó hạn chế hiện tượng mất cân bằng trong quá trình huấn luyện GAN. Ngoài ra, các thành phần hàm mất mát khác nhau (mất mát đối kháng, mất mát phân loại thuộc tính, và mất mát tái tạo ảnh) được kết hợp có trọng số, giúp Generator học được cả tính chân thực lẫn khả năng bảo toàn nội dung khuôn mặt ban đầu.
+
+\subsection{Lưu checkpoint và theo dõi quá trình huấn luyện}
+
+Một điểm quan trọng trong thiết kế pipeline là cơ chế lưu checkpoint định kỳ trong suốt quá trình huấn luyện. Tại mỗi mốc số vòng lặp nhất định, trạng thái của mô hình được lưu lại, bao gồm tham số của Generator và Discriminator. Điều này không chỉ giúp phòng tránh rủi ro gián đoạn huấn luyện mà còn tạo điều kiện thuận lợi cho việc đánh giá và so sánh chất lượng mô hình tại các giai đoạn khác nhau.
+
+Song song với việc lưu checkpoint, pipeline cũng ghi nhận các giá trị mất mát và một số chỉ số trung gian trong quá trình huấn luyện. Các thông tin này được sử dụng để theo dõi xu hướng hội tụ của mô hình, phát hiện sớm các dấu hiệu bất ổn, và làm cơ sở cho việc lựa chọn checkpoint tối ưu trong giai đoạn đánh giá thực nghiệm ở Chương~5.
+
+\subsection{Tính mở rộng và khả năng tái sử dụng của pipeline}
+
+Pipeline huấn luyện trong đồ án được thiết kế theo hướng mô-đun, cho phép dễ dàng mở rộng hoặc điều chỉnh trong các nghiên cứu tiếp theo. Ví dụ, có thể thay đổi tập thuộc tính khuôn mặt, điều chỉnh cấu trúc mô hình, hoặc bổ sung các chiến lược huấn luyện nâng cao mà không cần xây dựng lại toàn bộ pipeline. Tính linh hoạt này giúp pipeline không chỉ phục vụ mục tiêu của đồ án hiện tại mà còn có giá trị tham khảo cho các nghiên cứu và ứng dụng liên quan trong tương lai.
+
+
+Phần này đã trình bày chi tiết thiết kế pipeline huấn luyện mô hình StarGAN được sử dụng trong đồ án, từ khâu chuẩn bị dữ liệu, tiền xử lý, cơ chế huấn luyện đối kháng cho đến việc lưu checkpoint và theo dõi quá trình huấn luyện. Pipeline được xây dựng với mục tiêu đảm bảo tính ổn định, khả năng mở rộng và phục vụ hiệu quả cho việc đánh giá mô hình ở các chương sau. Trên cơ sở thiết kế này, Chương~4 sẽ đi sâu vào quá trình triển khai huấn luyện mô hình, bao gồm các thiết lập cụ thể và những vấn đề thực tế phát sinh trong quá trình huấn luyện.
+
+
+
+
+
+
+
+\section{Thiết kế pipeline sinh ảnh và đánh giá}
+\label{section:3.3}
+
+Sau khi hoàn tất quá trình huấn luyện mô hình StarGAN như đã trình bày trong Mục~\ref{section:3.2}, bước tiếp theo của hệ thống là thiết kế pipeline sinh ảnh và đánh giá chất lượng ảnh sinh. Pipeline này đóng vai trò then chốt trong việc kiểm tra khả năng tổng quát hóa của mô hình, cũng như đo lường một cách định lượng và định tính mức độ thành công của bài toán thay đổi thuộc tính khuôn mặt. Nội dung của mục này trình bày chi tiết quy trình sinh ảnh từ mô hình đã huấn luyện và phương pháp đánh giá kết quả sinh ảnh theo nhiều góc độ khác nhau.
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{Hinhve/pipeline_sinh_anh_va_danh_gia.png}
+    \caption{Các giai đoạn của việc sinh ảnh và đánh giá}
+    \label{fig:pipeline_sinh_anh_va_danh_gia}
+\end{figure}
+
+\subsection{Pipeline sinh ảnh từ mô hình đã huấn luyện}
+
+Pipeline sinh ảnh (Mô tả trong trung đen tại Hình~\ref{fig:pipeline_sinh_anh_va_danh_gia}) được thiết kế nhằm đảm bảo hai mục tiêu chính: (i) cho phép mô hình thực hiện thay đổi từng thuộc tính khuôn mặt một cách độc lập hoặc kết hợp nhiều thuộc tính, và (ii) tạo ra tập ảnh đầu ra có cấu trúc thống nhất, thuận tiện cho việc đánh giá và so sánh giữa các checkpoint huấn luyện khác nhau.
+
+Đầu vào của pipeline sinh ảnh bao gồm ảnh khuôn mặt gốc $x$ và vector thuộc tính mục tiêu $c_{trg}$. Ảnh đầu vào được tiền xử lý theo đúng quy trình đã sử dụng trong giai đoạn huấn luyện, bao gồm thay đổi kích thước về kích thước chuẩn của mô hình, chuẩn hóa giá trị điểm ảnh về miền $[-1,1]$, và chuyển đổi về tensor phù hợp với framework học sâu sử dụng. Vector thuộc tính mục tiêu $c_{trg}$ được xây dựng dựa trên nhãn thuộc tính mong muốn, trong đó mỗi chiều tương ứng với một thuộc tính khuôn mặt như đã định nghĩa trong tập dữ liệu~\cite{Choi2018StarGAN}.
+
+Mô hình sinh $G$ sau khi được huấn luyện sẽ nhận cặp đầu vào $(x, c_{trg})$ và sinh ra ảnh kết quả $\hat{x} = G(x, c_{trg})$. Đối với bài toán thay đổi từng thuộc tính riêng lẻ, pipeline lần lượt tạo các vector $c_{trg}$ khác nhau bằng cách thay đổi một chiều thuộc tính trong khi giữ nguyên các chiều còn lại~\cite{Choi2018StarGAN}. Điều này cho phép đánh giá mức độ kiểm soát của mô hình đối với từng thuộc tính khuôn mặt cụ thể. Ngoài ra, pipeline cũng hỗ trợ sinh ảnh với nhiều thuộc tính được thay đổi đồng thời nhằm kiểm tra khả năng xử lý các tổ hợp thuộc tính phức tạp.
+
+Ảnh đầu ra sau khi sinh được hậu xử lý bằng cách đưa giá trị điểm ảnh trở lại miền $[0,255]$ và chuyển đổi về định dạng ảnh chuẩn để lưu trữ~\cite{Choi2018StarGAN}. Các ảnh sinh được tổ chức theo cấu trúc thư mục rõ ràng, phân tách theo checkpoint huấn luyện và theo từng thuộc tính, nhằm phục vụ cho các bước đánh giá tự động ở giai đoạn tiếp theo.
+
+\subsection{Đánh giá định lượng}
+
+Để đánh giá chất lượng ảnh sinh một cách khách quan, pipeline đánh giá định lượng được xây dựng dựa trên các chỉ số phổ biến trong lĩnh vực sinh ảnh, cụ thể là SSIM và FID, đã được trình bày chi tiết trong Mục~\ref{section:2.5}. Pipeline đánh giá được thiết kế theo hướng tự động hóa, cho phép xử lý số lượng lớn ảnh sinh tương ứng với nhiều checkpoint huấn luyện khác nhau.
+
+Đối với chỉ số SSIM, pipeline tiến hành so sánh ảnh gốc $x$ và ảnh sinh $\hat{x}$ nhằm đánh giá mức độ bảo toàn cấu trúc khuôn mặt sau khi thay đổi thuộc tính. Việc tính SSIM được thực hiện riêng cho từng cặp ảnh và sau đó lấy giá trị trung bình trên toàn bộ tập dữ liệu. Ngoài ra, pipeline cũng cho phép tính SSIM theo từng thuộc tính để phân tích chi tiết mức độ ảnh hưởng của từng loại thay đổi lên cấu trúc khuôn mặt.
+
+Đối với chỉ số FID, pipeline đánh giá sự khác biệt phân phối giữa tập ảnh sinh và tập ảnh thật tương ứng. Đặc trưng của ảnh được trích xuất thông qua mạng Inception được huấn luyện sẵn, sau đó sử dụng để tính toán khoảng cách Fréchet. Pipeline được thiết kế để tính FID cho từng thuộc tính riêng biệt, cũng như FID trung bình trên toàn bộ các thuộc tính, nhằm phản ánh chất lượng tổng thể của mô hình tại mỗi checkpoint huấn luyện.
+
+Một điểm quan trọng trong thiết kế pipeline đánh giá là đảm bảo tính nhất quán giữa các checkpoint. Cùng một tập ảnh đầu vào và cùng một cấu hình đánh giá được sử dụng cho tất cả các checkpoint, giúp việc so sánh kết quả trở nên công bằng và có ý nghĩa.
+
+\subsection{Đánh giá định tính}
+
+Bên cạnh đánh giá định lượng, pipeline sinh ảnh và đánh giá còn hỗ trợ đánh giá định tính thông qua quan sát trực quan. Các ảnh sinh được sắp xếp theo từng thuộc tính và theo thứ tự checkpoint, cho phép người đánh giá dễ dàng so sánh mức độ thay đổi thuộc tính, tính tự nhiên của ảnh sinh và khả năng giữ nguyên các đặc điểm không liên quan của khuôn mặt.
+
+Đánh giá định tính đóng vai trò bổ trợ quan trọng cho đánh giá định lượng, đặc biệt trong các trường hợp chỉ số số học chưa phản ánh đầy đủ cảm nhận thị giác của con người. Việc kết hợp cả hai hình thức đánh giá giúp đưa ra nhận xét toàn diện hơn về hiệu quả của mô hình StarGAN trong bài toán thay đổi thuộc tính khuôn mặt.
+
+\subsection{Phân tích và so sánh giữa các checkpoint huấn luyện}
+
+Dựa trên kết quả SSIM và FID thu được, pipeline tiếp tục hỗ trợ phân tích sự thay đổi chất lượng mô hình theo số vòng lặp huấn luyện. Các giá trị đánh giá được tổng hợp và lưu trữ dưới dạng bảng dữ liệu, từ đó cho phép vẽ các biểu đồ thể hiện xu hướng biến đổi của SSIM và FID theo checkpoint.
+
+Việc phân tích theo checkpoint giúp làm rõ mối quan hệ giữa quá trình huấn luyện và chất lượng ảnh sinh, đồng thời hỗ trợ lựa chọn checkpoint tối ưu cho việc triển khai ứng dụng thực tế. Đặc biệt, pipeline được thiết kế để phát hiện các hiện tượng như overfitting hoặc suy giảm chất lượng ảnh khi huấn luyện quá lâu, thông qua việc quan sát sự biến động của các chỉ số đánh giá.
+
+
+
+Chương này đã trình bày chi tiết thiết kế pipeline sinh ảnh và đánh giá chất lượng ảnh sinh của hệ thống. Pipeline được xây dựng theo hướng tự động, có khả năng sinh ảnh cho nhiều thuộc tính và nhiều checkpoint khác nhau, đồng thời hỗ trợ đánh giá cả định lượng lẫn định tính. Kết quả thu được từ pipeline này là cơ sở quan trọng cho các phân tích thực nghiệm và so sánh mô hình, sẽ được trình bày chi tiết trong hai chương tiếp theo.
+
+
+
+
+
+
+
+\end{document}

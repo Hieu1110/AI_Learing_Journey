@@ -1,0 +1,193 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Chương 3 đã trình bày kiến trúc tổng thể của hệ thống cũng như thiết kế các pipeline chính cho quá trình huấn luyện, sinh ảnh và đánh giá mô hình. Trên cơ sở thiết kế đó, Chương 4 tập trung vào quá trình hiện thực hoá pipeline huấn luyện trong thực tế, bao gồm việc lựa chọn và sử dụng bộ dữ liệu, thiết lập mô hình StarGAN, cấu hình các tham số huấn luyện và triển khai huấn luyện trên môi trường tính toán.
+
+Trong chương này, trước hết đồ án trình bày về bộ dữ liệu CelebA được sử dụng cho bài toán thay đổi thuộc tính khuôn mặt, cùng với cách thức dữ liệu được tổ chức và xử lý đầu vào trong khuôn khổ mã nguồn StarGAN. Tiếp theo, quá trình thiết lập mô hình và các tham số huấn luyện sẽ được mô tả chi tiết, làm cơ sở cho các thực nghiệm và đánh giá được trình bày trong chương tiếp theo.
+
+
+\section{Chuẩn bị dữ liệu và thiết lập mô hình}
+\label{section:4.1}
+
+\subsection{Giới thiệu bộ dữ liệu CelebA}
+
+Trong đồ án này, mô hình StarGAN được huấn luyện và đánh giá trên bộ dữ liệu CelebA (CelebFaces Attributes Dataset), một trong những bộ dữ liệu chuẩn và phổ biến nhất trong lĩnh vực xử lý ảnh khuôn mặt và học sâu. Bộ dữ liệu CelebA được công bố bởi nhóm nghiên cứu tại Đại học Trung văn Hồng Kông và hiện được cung cấp rộng rãi thông qua nhiều kho dữ liệu công cộng, trong đó có nền tảng Kaggle\footnote{https://www.kaggle.com/datasets/jessicali9530/celeba-dataset}.
+
+CelebA bao gồm hơn 200{,}000 ảnh khuôn mặt của khoảng 10{,}000 danh tính khác nhau, được thu thập từ các nguồn ảnh trong điều kiện tự nhiên. Mỗi ảnh trong bộ dữ liệu đều được gán nhãn cho 40 thuộc tính khuôn mặt ở dạng nhị phân, phản ánh các đặc trưng hình thái và phong cách phổ biến như giới tính, kiểu tóc, tình trạng râu, trạng thái biểu cảm, phụ kiện và các yếu tố trang điểm. Các thuộc tính này được gán nhãn thủ công và đã được kiểm chứng rộng rãi trong nhiều công trình nghiên cứu trước đây.
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{Hinhve/overview_celeba.png}
+    \caption{Giới thiệu về bộ dữ liệu CelebA}
+    \label{fig:overview_celeba}
+\end{figure}
+Một số đặc điểm nổi bật của bộ dữ liệu CelebA có thể kể đến như:
+\begin{itemize}
+    \item Đa dạng cao về khuôn mặt, góc nhìn, ánh sáng và biểu cảm, phản ánh tương đối tốt các điều kiện trong thế giới thực.
+    \item Hệ thống nhãn thuộc tính phong phú, cho phép xây dựng và đánh giá các bài toán chỉnh sửa thuộc tính khuôn mặt đa miền.
+    \item Quy mô lớn, phù hợp cho việc huấn luyện các mô hình học sâu có số lượng tham số lớn như GAN.
+\end{itemize}
+
+Nhờ những đặc điểm trên, CelebA đã trở thành bộ dữ liệu chuẩn cho nhiều nghiên cứu về sinh ảnh khuôn mặt, thay đổi thuộc tính khuôn mặt, phân tích biểu cảm và nhận dạng khuôn mặt. Việc sử dụng CelebA trong đồ án này giúp đảm bảo tính so sánh và đối chiếu với các nghiên cứu liên quan đã được công bố trước đó.
+
+\subsection{Lựa chọn và sử dụng tập thuộc tính}
+
+Mặc dù CelebA cung cấp tới 40 thuộc tính khuôn mặt, trong phạm vi đồ án, em đã lựa chọn một tập con gồm 17 thuộc tính tiêu biểu để huấn luyện và đánh giá mô hình StarGAN. Việc lựa chọn này dựa trên hai tiêu chí chính: (i) các thuộc tính có ý nghĩa đối với người dùng, và (ii) các thuộc tính thường được sử dụng trong các nghiên cứu về StarGAN và các mô hình chỉnh sửa khuôn mặt đa miền.
+
+Danh sách các thuộc tính được sử dụng bao gồm: Hói đầu, Tóc mái, Tóc đen, Tóc vàng, Mũm mĩm, Đeo kính, Râu dê, Tóc bạc, Trang điểm đậm, Nam giới, Miệng hơi mở, Râu mép, Không râu, Da nhợt nhạt, Má hồng, Mỉm cười và Đánh son. Mỗi ảnh đầu vào được biểu diễn bởi một vector thuộc tính nhị phân có chiều tương ứng với số lượng thuộc tính được chọn, đóng vai trò là điều kiện miền (domain condition) cho mô hình StarGAN.
+
+Việc giảm số lượng thuộc tính giúp quá trình huấn luyện trở nên ổn định hơn, đồng thời cho phép tập trung phân tích sâu chất lượng sinh ảnh và khả năng thay đổi từng thuộc tính cụ thể của mô hình.
+
+\subsection{Tiền xử lý dữ liệu}
+
+Trong đồ án này, em không xây dựng một quy trình tiền xử lý dữ liệu độc lập mà sử dụng trực tiếp pipeline tiền xử lý đã được cung cấp trong mã nguồn chính thức của StarGAN\footnote{https://github.com/yunjey/stargan}. Pipeline này đã được kiểm chứng qua nhiều nghiên cứu và thực nghiệm, đảm bảo tính uy tín.
+
+Cụ thể, các bước tiền xử lý chính bao gồm:
+\begin{itemize}
+    \item Chuẩn hóa kích thước ảnh về cùng một độ phân giải cố định (thường là $128 \times 128$ hoặc $256 \times 256$ pixel và sẽ được xét từ tham số truyền vào ở bước huấn luyện) để phù hợp với kiến trúc mạng.
+    \item Cắt và căn chỉnh khuôn mặt nhằm đảm bảo vùng khuôn mặt chiếm tỷ lệ hợp lý trong ảnh đầu vào.
+    \item Chuẩn hóa giá trị điểm ảnh về khoảng $[-1, 1]$ để phù hợp với hàm kích hoạt \textit{tanh} ở đầu ra của bộ sinh (Generator).
+    \item Tạo các cặp dữ liệu gồm ảnh gốc và vector thuộc tính tương ứng để phục vụ huấn luyện có điều kiện.
+\end{itemize}
+
+\subsection{Thiết lập mô hình StarGAN}
+
+Mô hình StarGAN được sử dụng trong đồ án dựa trên kiến trúc chuẩn do tác giả gốc đề xuất~\cite{Zhu2018CycleGAN}, bao gồm hai thành phần chính là bộ sinh (Generator) và bộ phân biệt (Discriminator). Bộ sinh nhận ảnh đầu vào cùng với vector thuộc tính mục tiêu và sinh ra ảnh mới với các thuộc tính được thay đổi tương ứng. Bộ phân biệt đồng thời thực hiện hai nhiệm vụ: phân biệt ảnh thật và ảnh sinh, và dự đoán thuộc tính của ảnh đầu vào.
+
+Trong quá trình thiết lập mô hình, các thành phần kiến trúc chính như số lớp tích chập, số lượng kênh, hàm kích hoạt và cơ chế chuẩn hóa đều được giữ nguyên theo cấu hình gốc của StarGAN. Điều này giúp tập trung đánh giá ảnh hưởng của quá trình huấn luyện và lựa chọn checkpoint, thay vì thay đổi cấu trúc mạng.
+
+Các tham số huấn luyện quan trọng như tốc độ học (learning rate), kích thước batch, số bước huấn luyện của bộ sinh và bộ phân biệt, cũng như các hệ số trọng số cho hàm mất mát đối kháng, mất mát phân loại và mất mát tái tạo chu trình đều được thiết lập theo khuyến nghị trong bài báo gốc. Trong một số trường hợp, các tham số này được điều chỉnh nhẹ để phù hợp với tài nguyên tính toán và điều kiện thực nghiệm trên nền tảng Kaggle.
+
+
+Tóm lại, phần chuẩn bị dữ liệu và thiết lập mô hình trong đồ án được thực hiện dựa trên các thực hành chuẩn đã được kiểm chứng trong cộng đồng nghiên cứu. Việc sử dụng bộ dữ liệu CelebA cùng với pipeline và kiến trúc StarGAN gốc giúp đảm bảo tính khoa học, tính so sánh và độ tin cậy của các kết quả thực nghiệm. Những thiết lập này tạo nền tảng quan trọng cho quá trình huấn luyện mô hình được trình bày trong phần tiếp theo của chương.
+
+
+
+
+
+\section{Triển khai huấn luyện mô hình}
+\label{section:4.2}
+
+Sau khi hoàn tất công tác chuẩn bị dữ liệu và thiết lập cấu hình mô hình ở Mục~\ref{section:4.1}, chương này trình bày chi tiết quá trình triển khai huấn luyện mô hình StarGAN cho bài toán thay đổi thuộc tính khuôn mặt. Nội dung tập trung vào quy trình huấn luyện thực tế, chiến lược tối ưu được sử dụng, các siêu tham số quan trọng, cũng như những quyết định kỹ thuật nhằm đảm bảo mô hình học ổn định và đạt hiệu quả tốt trong thực nghiệm.
+
+\subsection{Quy trình huấn luyện tổng thể}
+
+Quá trình huấn luyện mô hình được triển khai theo pipeline chuẩn của StarGAN, bao gồm hai mạng thành phần chính là mạng sinh (Generator) và mạng phân biệt (Discriminator). Hai mạng này được huấn luyện luân phiên theo cơ chế đối kháng, trong đó Generator học cách sinh ra ảnh giả có chất lượng cao và mang đúng thuộc tính mong muốn, còn Discriminator học cách phân biệt ảnh thật – ảnh giả, đồng thời dự đoán chính xác các thuộc tính của ảnh đầu vào.
+
+Tại mỗi vòng lặp huấn luyện (iteration), mô hình thực hiện các bước chính sau:
+\begin{itemize}
+    \item Lấy một minibatch ảnh thật từ tập huấn luyện cùng với vector thuộc tính gốc.
+    \item Sinh vector thuộc tính mục tiêu bằng cách hoán đổi hoặc chọn ngẫu nhiên các nhãn thuộc tính.
+    \item Cập nhật Discriminator thông qua các hàm mất mát đối kháng và mất mát phân loại thuộc tính.
+    \item Cập nhật Generator nhằm đánh lừa Discriminator, đồng thời đảm bảo ảnh sinh giữ được nội dung gốc và thay đổi đúng thuộc tính.
+\end{itemize}
+
+Quy trình này được lặp lại liên tục cho đến khi đạt số vòng huấn luyện định trước. Các checkpoint trung gian được lưu định kỳ để phục vụ đánh giá và phân tích chất lượng mô hình theo thời gian.
+
+\subsection{Hàm mất mát và chiến lược tối ưu}
+
+Trong quá trình huấn luyện, StarGAN sử dụng tổ hợp nhiều hàm mất mát nhằm đảm bảo cả tính chân thực của ảnh sinh lẫn khả năng kiểm soát thuộc tính. Cụ thể, hàm mất mát tổng cho Generator bao gồm ba thành phần chính: mất mát đối kháng, mất mát phân loại thuộc tính và mất mát tái tạo chu trình (cycle consistency loss). Thành phần tái tạo đóng vai trò quan trọng trong việc giữ lại các đặc trưng không liên quan đến thuộc tính cần thay đổi, chẳng hạn như danh tính khuôn mặt hay cấu trúc tổng thể của ảnh.
+
+Đối với Discriminator, hàm mất mát bao gồm mất mát phân biệt thật – giả và mất mát phân loại thuộc tính. Việc kết hợp phân loại thuộc tính trực tiếp trong Discriminator giúp mô hình học được mối quan hệ giữa nội dung ảnh và nhãn thuộc tính một cách hiệu quả hơn.
+
+Mô hình được tối ưu bằng thuật toán Adam với các hệ số momentum được thiết lập theo khuyến nghị trong công trình StarGAN gốc. Tốc độ học (learning rate) được giữ cố định trong giai đoạn đầu của huấn luyện, sau đó giảm dần theo lịch trình nhằm giúp mô hình hội tụ ổn định và tránh dao động mạnh ở các giai đoạn sau.
+
+\subsection{Thiết lập siêu tham số và cấu hình huấn luyện}
+Lệnh huấn luyện mô hình StarGAN được cấu hình như sau:
+\begin{verbatim}
+python main.py --mode train 
+  --dataset CelebA 
+  --image_size 156 
+  --c_dim 17 
+  --attr_path data/celeba/list_attr_celeba.txt 
+  --celeba_image_dir /kaggle/input/celeba-dataset/img_align_celeba/img_align_celeba 
+  --log_dir stargan_celeba/logs 
+  --model_save_dir stargan_celeba/models 
+  --result_dir stargan_celeba/results 
+  --sample_dir stargan_celeba/samples 
+  --batch_size 16 
+  --g_lr 0.00005 
+  --d_lr 0.00005 
+  --num_iters 650000 
+  --num_iters_decay 80000 
+  --resume_iters 500000 
+  --sample_step 20000 
+  --model_save_step 50000 
+  --log_step 2000 
+  --selected_attrs Bald Bangs Black_Hair Blond_Hair Chubby Eyeglasses 
+                   Goatee Gray_Hair Heavy_Makeup Male Mouth_Slightly_Open 
+                   Mustache No_Beard Pale_Skin Rosy_Cheeks Smiling 
+                   Wearing_Lipstick
+\end{verbatim}
+
+Trong đó, tham số \texttt{image\_size = 156} được lựa chọn nhằm cân bằng giữa chất lượng ảnh sinh và giới hạn tài nguyên GPU của môi trường Kaggle. Số chiều điều kiện \texttt{c\_dim = 17} tương ứng với 17 thuộc tính khuôn mặt được sử dụng xuyên suốt trong toàn bộ quá trình huấn luyện và đánh giá mô hình.
+
+Kích thước batch \texttt{batch\_size = 16} được xác định sau nhiều lần thử nghiệm với các giá trị khác nhau. Giá trị này cho phép mô hình huấn luyện ổn định trong điều kiện bộ nhớ GPU hạn chế, đồng thời không làm suy giảm đáng kể tốc độ hội tụ.
+
+Tốc độ học của bộ sinh và bộ phân biệt được thiết lập đồng nhất với 
+$\texttt{g\_lr} = \texttt{d\_lr} = 5 \times 10^{-5}$. 
+Qua thực nghiệm, mức học này cho thấy sự cân bằng tốt giữa hai mạng, hạn chế hiện tượng mất ổn định trong huấn luyện GAN như dao động mạnh hoặc sụp đổ mô hình. 
+Các giá trị tốc độ học lớn hơn thường dẫn đến hiện tượng nhiễu và làm giảm chất lượng ảnh sinh, trong khi các giá trị nhỏ hơn khiến quá trình hội tụ diễn ra chậm và kéo dài đáng kể thời gian huấn luyện.
+
+Tổng số vòng lặp huấn luyện được đặt ở mức \texttt{num\_iters = 650000}, cho phép mô hình học đầy đủ các biến đổi thuộc tính khuôn mặt phức tạp. Cơ chế suy giảm tuyến tính tốc độ học được kích hoạt tại \texttt{num\_iters\_decay = 80000} vòng lặp cuối, giúp mô hình tinh chỉnh và ổn định hơn ở giai đoạn huấn luyện sau.
+
+Tập các thuộc tính \texttt{selected\_attrs} được lựa chọn dựa trên mức độ phổ biến trong tập dữ liệu CelebA cũng như khả năng thể hiện rõ ràng trên ảnh khuôn mặt. 
+
+Qua nhiều lần thử nghiệm với các cấu hình khác nhau, bộ tham số trên được xác định là cấu hình tối ưu nhất trong điều kiện tài nguyên hiện có, đảm bảo sự cân bằng giữa chất lượng ảnh sinh, độ ổn định huấn luyện và thời gian thực thi.
+
+
+\subsection{Môi trường triển khai}
+
+Quá trình huấn luyện được triển khai trên nền tảng điện toán đám mây Kaggle, sử dụng GPU để tăng tốc tính toán. Môi trường phần mềm bao gồm Python, PyTorch và các thư viện xử lý ảnh phổ biến. Việc sử dụng Kaggle giúp đảm bảo tính tái lập của thực nghiệm, đồng thời tạo điều kiện thuận lợi cho việc quản lý dữ liệu và checkpoint huấn luyện.
+
+Trong quá trình huấn luyện kéo dài, mô hình được giám sát thông qua các chỉ số mất mát và kết quả sinh ảnh trung gian. Việc theo dõi này giúp phát hiện sớm các dấu hiệu bất ổn như mất mát dao động mạnh hoặc hiện tượng mode collapse, từ đó có thể điều chỉnh kịp thời các tham số huấn luyện.
+
+\subsection{Lưu checkpoint và chiến lược đánh giá trung gian}
+
+Một điểm quan trọng trong quá trình triển khai huấn luyện là chiến lược lưu và đánh giá checkpoint. Thay vì chỉ sử dụng mô hình ở vòng huấn luyện cuối cùng, các checkpoint trung gian được trích xuất và đánh giá độc lập bằng các chỉ số SSIM và FID. Cách tiếp cận này cho phép phân tích sâu hơn quá trình học của mô hình, đồng thời xác định những thời điểm huấn luyện mà mô hình đạt chất lượng sinh ảnh tốt nhất.
+
+Việc đánh giá theo checkpoint cũng cho thấy mô hình không nhất thiết đạt kết quả tối ưu ở iteration cuối, mà có thể đạt cực trị chất lượng tại một giai đoạn trung gian. Điều này đặc biệt quan trọng đối với các mô hình GAN, vốn nhạy cảm với quá trình huấn luyện kéo dài và dễ bị suy giảm chất lượng nếu huấn luyện quá mức.
+
+
+Tổng thể, quá trình huấn luyện mô hình StarGAN được triển khai theo đúng pipeline chuẩn, kết hợp với chiến lược giám sát và đánh giá chặt chẽ. Mô hình thể hiện khả năng học ổn định, sinh ảnh có chất lượng tốt và thay đổi thuộc tính tương đối chính xác trên nhiều nhóm đặc trưng khuôn mặt khác nhau. Những kết quả thu được từ quá trình huấn luyện này là cơ sở cho các thực nghiệm đánh giá chi tiết được trình bày trong Chương~5, cũng như cho việc xây dựng ứng dụng thử nghiệm ở Chương~6.
+
+
+
+
+
+
+\section{Các vấn đề gặp phải và cách khắc phục}
+\label{section:4.3}
+
+Trong quá trình triển khai huấn luyện mô hình StarGAN cho bài toán thay đổi thuộc tính khuôn mặt, bên cạnh những kết quả đạt được, đồ án cũng gặp phải nhiều khó khăn và thách thức đến từ cả yếu tố kỹ thuật lẫn điều kiện thực nghiệm. Các vấn đề này xuất phát chủ yếu từ đặc thù của mô hình học sâu sinh ảnh, yêu cầu tài nguyên tính toán lớn, cũng như những giới hạn cố hữu của môi trường huấn luyện được sử dụng. Việc nhận diện rõ các vấn đề và đưa ra giải pháp phù hợp đóng vai trò quan trọng trong việc đảm bảo tính khả thi và độ tin cậy của kết quả huấn luyện.
+
+\subsection{Hạn chế về tài nguyên tính toán}
+
+Một trong những khó khăn lớn nhất trong quá trình huấn luyện mô hình là hạn chế về tài nguyên phần cứng, đặc biệt là năng lực xử lý của GPU. Môi trường Kaggle cung cấp GPU miễn phí nhưng chỉ ở mức NVIDIA Tesla T4 hoặc P100, với dung lượng bộ nhớ giới hạn. Trong khi đó, StarGAN là mô hình sinh ảnh đa miền có kiến trúc phức tạp, yêu cầu xử lý đồng thời nhiều thuộc tính khuôn mặt và thực hiện các phép toán tích chập với ảnh độ phân giải tương đối cao.
+
+Hạn chế này dẫn đến việc không thể tăng batch size lớn như mong muốn, làm ảnh hưởng đến độ ổn định của quá trình huấn luyện và tốc độ hội tụ của mô hình. Ngoài ra, việc huấn luyện trong thời gian dài với số lượng iteration lớn cũng dễ gặp tình trạng tràn bộ nhớ hoặc gián đoạn tiến trình.
+
+Để khắc phục vấn đề này, đồ án đã tiến hành thử nghiệm nhiều cấu hình siêu tham số khác nhau, bao gồm batch size, learning rate, hệ số cân bằng giữa các hàm mất mát và tần suất cập nhật discriminator/generator. Thay vì lựa chọn một cấu hình cố định ngay từ đầu, quá trình huấn luyện được chia thành các giai đoạn thử nghiệm ngắn, trong đó từng tập siêu tham số được đánh giá thông qua các chỉ số định lượng như FID và SSIM. Từ kết quả thu được, bộ siêu tham số cho hiệu năng tốt nhất trong điều kiện tài nguyên cho phép được lựa chọn để tiếp tục huấn luyện dài hạn. Cách tiếp cận này giúp tận dụng hiệu quả tài nguyên GPU hạn chế mà vẫn đảm bảo chất lượng mô hình ở mức chấp nhận được.
+
+\subsection{Hạn chế về thời gian huấn luyện}
+
+Một thách thức quan trọng khác đến từ giới hạn thời gian sử dụng GPU liên tục trên Kaggle: Kaggle chỉ cho phép tối đa khoảng 12 giờ cho mỗi phiên làm việc. Trong khi đó, để mô hình StarGAN hội tụ ổn định, số lượng iteration cần thiết thường lên tới hàng trăm nghìn bước huấn luyện.
+
+Để giải quyết vấn đề này, quá trình huấn luyện được chia nhỏ thành nhiều giai đoạn, mỗi giai đoạn tương ứng với một khoảng iteration xác định và kết thúc bằng việc lưu lại checkpoint của mô hình. Các checkpoint này bao gồm trọng số của generator và discriminator, cho phép tiếp tục huấn luyện từ trạng thái trước đó thay vì phải khởi động lại từ đầu. Cách làm này không chỉ giúp vượt qua giới hạn thời gian của mỗi phiên Kaggle mà còn tạo điều kiện thuận lợi cho việc đánh giá chất lượng mô hình tại các mốc huấn luyện khác nhau.
+
+Bên cạnh đó, đồ án cũng tận dụng việc tạo và sử dụng nhiều tài khoản Kaggle hợp lệ để phân bổ quá trình huấn luyện theo thời gian, từ đó tối ưu hóa việc khai thác tài nguyên GPU miễn phí. Mặc dù cách tiếp cận này không làm giảm tổng thời gian huấn luyện thực tế, nhưng giúp đảm bảo tiến trình huấn luyện không bị gián đoạn và tận dụng tối đa hạ tầng sẵn có.
+
+\subsection{Hạn chế trong đánh giá định lượng}
+
+Mặc dù các chỉ số như FID và SSIM cung cấp cơ sở định lượng quan trọng để đánh giá chất lượng ảnh sinh, việc tính toán các chỉ số này cũng tiêu tốn đáng kể tài nguyên và thời gian, đặc biệt khi cần đánh giá trên nhiều thuộc tính và nhiều checkpoint khác nhau. Do đó, đồ án không tính toán các chỉ số này tại mọi iteration mà chỉ thực hiện tại các mốc checkpoint quan trọng.
+
+Cách tiếp cận này giúp giảm chi phí tính toán trong khi vẫn đảm bảo có đủ dữ liệu để phân tích xu hướng hội tụ của mô hình và so sánh chất lượng giữa các giai đoạn huấn luyện.
+
+
+Từ những vấn đề và giải pháp nêu trên có thể thấy rằng, mặc dù bị giới hạn bởi môi trường huấn luyện và tài nguyên tính toán, đồ án vẫn đạt được các kết quả đáng tin cậy thông qua việc lựa chọn chiến lược huấn luyện phù hợp, tận dụng checkpoint, tối ưu siêu tham số và đánh giá có chọn lọc. Những kinh nghiệm rút ra trong quá trình khắc phục các khó khăn này không chỉ giúp hoàn thiện đồ án hiện tại mà còn là cơ sở thực tiễn quan trọng cho các nghiên cứu và ứng dụng tiếp theo trong lĩnh vực sinh ảnh bằng mô hình GAN.
+
+
+
+
+
+
+\end{document}

@@ -1,0 +1,22 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+\begin{center}
+    \Large{\textbf{TÓM TẮT NỘI DUNG ĐỒ ÁN}}\\
+\end{center}
+\vspace{1cm}
+Trong những năm gần đây, bài toán chỉnh sửa và thay đổi thuộc tính khuôn mặt trên ảnh chân dung đã thu hút nhiều sự quan tâm trong lĩnh vực thị giác máy tính và học máy, học sâu, đặc biệt với sự phát triển mạnh mẽ của các mô hình sinh đối kháng (Generative Adversarial Networks – GANs). Các ứng dụng của bài toán này rất đa dạng, từ chỉnh sửa ảnh, giải trí, đến hỗ trợ nghiên cứu và các hệ thống tương tác người – máy. Nhiều hướng tiếp cận đã được đề xuất, tiêu biểu như các mô hình GAN truyền thống cho từng thuộc tính riêng lẻ, hoặc các mô hình học có giám sát mạnh. Tuy nhiên, các phương pháp này thường gặp hạn chế về khả năng mở rộng, chi phí huấn luyện cao và khó đảm bảo tính nhất quán của hình ảnh khi thay đổi nhiều thuộc tính khác nhau.
+
+Trước những hạn chế đó, đồ án này lựa chọn hướng tiếp cận dựa trên mô hình StarGAN, một kiến trúc GAN đa miền cho phép thực hiện thay đổi nhiều thuộc tính khuôn mặt chỉ với một mô hình duy nhất. Hướng tiếp cận này được lựa chọn nhờ khả năng linh hoạt, hiệu quả trong huấn luyện và đã được chứng minh tính hiệu quả trong các nghiên cứu trước đó.
+
+Trên cơ sở hướng tiếp cận đã chọn, đồ án tiến hành xây dựng quy trình huấn luyện mô hình StarGAN trên tập dữ liệu CelebA, bao gồm các bước tiền xử lý dữ liệu, thiết kế chiến lược huấn luyện, lựa chọn siêu tham số và tối ưu mô hình. Bên cạnh đó, đồ án đề xuất và triển khai quy trình đánh giá chất lượng mô hình thông qua các chỉ số định lượng như FID và SSIM, đồng thời phân tích kết quả theo từng thuộc tính khuôn mặt thay đổi trên ảnh. Cuối cùng là triển khai một số ứng dụng sử dụng mô hình.
+
+Đóng góp chính của đồ án là xây dựng thành công một mô hình StarGAN có khả năng thay đổi nhiều thuộc tính khuôn mặt trên ảnh với chất lượng ổn định, đồng thời phát triển ứng dụng minh họa cho phép người dùng tương tác và chỉnh sửa ảnh khuôn mặt một cách trực quan. Kết quả thực nghiệm cho thấy mô hình đạt được chất lượng sinh ảnh khá tốt, giữ được đặc trưng khuôn mặt gốc và đáp ứng mục tiêu đề ra của đồ án. Tuy nhiên vẫn có thể cải thiện thêm ở một số hướng, sẽ được trình bày ở phần kết luận.
+\begin{flushright}
+Sinh viên thực hiện\\
+\begin{tabular}{@{}c@{}}
+\textit{(Ký và ghi rõ họ tên)}
+\end{tabular}
+\end{flushright}
+
+\end{document}

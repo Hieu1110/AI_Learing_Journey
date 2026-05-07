@@ -1,0 +1,46 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+\section{Kết luận}
+\label{section:7.1}
+
+Trong đồ án này, hệ thống thay đổi thuộc tính khuôn mặt dựa trên mô hình mạng sinh đối kháng StarGAN đã được nghiên cứu, triển khai và đánh giá một cách toàn diện. Từ việc khảo sát bài toán chỉnh sửa thuộc tính khuôn mặt đa miền, đồ án đã lựa chọn StarGAN như một mô hình phù hợp nhờ khả năng xử lý nhiều thuộc tính trong một kiến trúc thống nhất, giảm đáng kể chi phí huấn luyện so với các mô hình GAN truyền thống.
+
+Quá trình huấn luyện mô hình được thực hiện trên bộ dữ liệu CelebA với 17 thuộc tính khuôn mặt phổ biến. Mô hình được huấn luyện trong nhiều giai đoạn, sử dụng cơ chế checkpoint nhằm thích nghi với các ràng buộc về tài nguyên tính toán. Kết quả thực nghiệm cho thấy mô hình có khả năng học được các đặc trưng chính của từng thuộc tính, tạo ra các ảnh khuôn mặt biến đổi hợp lý trong khi vẫn duy trì được cấu trúc khuôn mặt ban đầu.
+
+Bên cạnh đánh giá định tính thông qua quan sát trực quan, đồ án đã sử dụng các chỉ số đánh giá định lượng phổ biến là SSIM và FID để phân tích chất lượng ảnh sinh ra. Kết quả cho thấy checkpoint tại mốc 500\,000 bước huấn luyện đạt được sự cân bằng tốt giữa tính chân thực và mức độ bảo toàn nội dung ảnh, từ đó được lựa chọn làm mô hình cuối cùng phục vụ cho việc xây dựng ứng dụng.
+
+Trên cơ sở mô hình đã huấn luyện, đồ án tiếp tục triển khai hai ứng dụng minh họa gồm chatbot trên nền tảng Telegram và ứng dụng web. Cả hai ứng dụng đều sử dụng chung một pipeline xử lý cốt lõi, bao gồm phát hiện khuôn mặt, tiền xử lý ảnh, sinh ảnh bằng StarGAN và hậu xử lý kết quả. Việc triển khai thành công các ứng dụng này cho thấy mô hình không chỉ có giá trị nghiên cứu mà còn có khả năng ứng dụng thực tế.
+
+Nhìn chung, đồ án đã đạt được mục tiêu đề ra ban đầu, từ nghiên cứu lý thuyết, triển khai mô hình, đánh giá kết quả cho tới xây dựng các ứng dụng minh họa, qua đó khẳng định tính khả thi của việc áp dụng StarGAN cho bài toán thay đổi thuộc tính khuôn mặt.
+
+\section{Hạn chế của đồ án hiện tại}
+\label{section:7.2}
+
+Mặc dù đạt được những kết quả nhất định, đồ án vẫn còn tồn tại một số hạn chế.
+
+Trước hết, chất lượng ảnh sinh ra trong một số trường hợp vẫn chưa thực sự thuyết phục, đặc biệt đối với các thuộc tính có sự thay đổi mạnh về hình dạng hoặc màu sắc như tóc, râu hoặc trang điểm đậm. Một số ảnh sinh xuất hiện hiện tượng nhiễu nhẹ, chi tiết khuôn mặt chưa sắc nét, hoặc mất tính tự nhiên khi so sánh với ảnh gốc.
+
+Bên cạnh đó, do pipeline xử lý bao gồm bước cắt khuôn mặt và ghép ngược kết quả vào ảnh ban đầu, nên trong một số trường hợp có thể quan sát được viền ghép tương đối rõ. Điều này đặc biệt dễ nhận thấy khi điều kiện ánh sáng của ảnh đầu vào phức tạp hoặc khi khuôn mặt bị xoay lệch nhiều so với tư thế chuẩn trong tập huấn luyện.
+
+Một hạn chế khác đến từ điều kiện huấn luyện mô hình. Việc sử dụng môi trường Kaggle với giới hạn về thời gian và tài nguyên GPU khiến quá trình thử nghiệm và tối ưu siêu tham số chưa thể thực hiện một cách đầy đủ. Mô hình chưa được huấn luyện với độ phân giải cao hơn hoặc với số vòng lặp lớn hơn để khai thác hết tiềm năng của kiến trúc StarGAN.
+
+Ngoài ra, hệ thống hiện tại chỉ hỗ trợ thay đổi từng thuộc tính đơn lẻ tại một thời điểm. Việc kết hợp đồng thời nhiều thuộc tính vẫn còn hạn chế và có thể dẫn tới hiện tượng xung đột giữa các thuộc tính trong ảnh sinh ra.
+
+\section{Hướng phát triển}
+\label{section:7.3}
+
+Trong tương lai, đồ án có thể được mở rộng và cải thiện theo nhiều hướng khác nhau.
+
+Một hướng phát triển quan trọng là nâng cao chất lượng ảnh sinh ra. Điều này có thể đạt được bằng cách sử dụng các biến thể cải tiến của StarGAN như StarGAN v2, hoặc kết hợp thêm các kỹ thuật huấn luyện hiện đại như perceptual loss, adaptive instance normalization hoặc các cơ chế attention để mô hình tập trung tốt hơn vào vùng khuôn mặt cần chỉnh sửa.
+
+Bên cạnh đó, pipeline hậu xử lý có thể được cải tiến nhằm giảm hiện tượng viền ghép và tăng tính liền mạch giữa khuôn mặt đã chỉnh sửa và ảnh gốc. Việc áp dụng các phương pháp làm mịn biên, hòa trộn màu sắc hoặc sử dụng mô hình segmentation chính xác hơn là những hướng nghiên cứu tiềm năng.
+
+Về mặt dữ liệu, hệ thống có thể được mở rộng sang các bộ dữ liệu lớn hơn và đa dạng hơn, bao gồm nhiều độ tuổi, chủng tộc và điều kiện ánh sáng khác nhau. Điều này giúp mô hình có khả năng tổng quát tốt hơn khi áp dụng vào các tình huống thực tế.
+
+Cuối cùng, về mặt ứng dụng, hệ thống có thể được phát triển thành các nền tảng hoàn chỉnh hơn như ứng dụng di động hoặc dịch vụ trực tuyến, cho phép người dùng tương tác linh hoạt với nhiều thuộc tính cùng lúc. Việc tích hợp thêm các cơ chế cá nhân hóa hoặc chỉnh sửa mức độ tác động của từng thuộc tính cũng là một hướng phát triển đáng chú ý.
+
+Tổng thể, mặc dù còn một số hạn chế, đồ án đã đặt nền tảng vững chắc cho việc nghiên cứu và ứng dụng các mô hình GAN trong bài toán chỉnh sửa khuôn mặt, đồng thời mở ra nhiều hướng phát triển tiềm năng trong tương lai.
+
+
+\end{document}

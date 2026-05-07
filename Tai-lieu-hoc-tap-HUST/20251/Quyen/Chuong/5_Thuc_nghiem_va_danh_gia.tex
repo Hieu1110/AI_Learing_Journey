@@ -1,0 +1,305 @@
+\documentclass[../DoAn.tex]{subfiles}
+\begin{document}
+
+Chương này trình bày quá trình thiết lập môi trường thực nghiệm, phương pháp đánh giá và các kết quả thu được khi áp dụng mô hình StarGAN đã huấn luyện cho bài toán thay đổi thuộc tính khuôn mặt. Toàn bộ các thí nghiệm được thiết kế nhằm đánh giá một cách định lượng và có hệ thống chất lượng ảnh sinh ra theo từng checkpoint huấn luyện cũng như theo từng thuộc tính khuôn mặt. Các nội dung trong chương bao gồm mô tả môi trường thực nghiệm, phương pháp đánh giá dựa trên các chỉ số SSIM và FID, phân tích kết quả tổng thể và phân tích chi tiết theo từng thuộc tính, từ đó rút ra nhận xét về quá trình huấn luyện và lựa chọn mô hình phù hợp cho ứng dụng thực tế.
+
+\section{Thiết lập môi trường thực nghiệm}
+\label{section:5.1}
+
+Các thí nghiệm trong đồ án được triển khai trên nền tảng Kaggle Notebook, một môi trường điện toán đám mây phổ biến cho nghiên cứu và thử nghiệm các mô hình học sâu. Việc lựa chọn Kaggle xuất phát từ khả năng cung cấp miễn phí tài nguyên GPU, hỗ trợ sẵn các thư viện phổ biến cho học máy và thị giác máy tính, đồng thời thuận tiện cho việc tổ chức các thử nghiệm mà không cần tới thiết bị có GPU thật.
+
+Về phần cứng, em sử dụng môi trường Kaggle với GPU P100, đi kèm với bộ nhớ đồ họa giới hạn và thời gian chạy tối đa cho mỗi phiên làm việc là 12 giờ liên tục. Các hạn chế này ảnh hưởng trực tiếp đến chiến lược huấn luyện và đánh giá mô hình, đặc biệt đối với các mô hình sinh ảnh có thời gian huấn luyện dài như StarGAN. Do đó, quá trình thực nghiệm được thiết kế theo hướng chia nhỏ thành nhiều phiên.
+
+Về phần mềm, các thí nghiệm được thực hiện với code bằng Python với các thư viện chính bao gồm PyTorch cho việc xây dựng và sử dụng mô hình học sâu, torchvision cho các mô hình và phép biến đổi ảnh chuẩn hóa, OpenCV và Pillow cho xử lý ảnh, cùng với NumPy và SciPy cho các phép toán số học và thống kê. Mã nguồn StarGAN được sử dụng trong đồ án được kế thừa và điều chỉnh từ phiên bản công khai trên GitHub.
+
+Dữ liệu thực nghiệm được lấy từ bộ dữ liệu CelebA, em lấy ra 1000 ảnh khuôn mặt ngẫu nhiên và cố định để làm tập kiểm tra. Việc sử dụng cùng một tập ảnh đầu vào cho tất cả các checkpoint nhằm đảm bảo tính công bằng và nhất quán khi so sánh kết quả sinh ảnh giữa các giai đoạn huấn luyện khác nhau. Tập ảnh này được giữ nguyên trong suốt quá trình thực nghiệm và được sử dụng để sinh ảnh với 17 thuộc tính khuôn mặt khác nhau theo cấu hình của mô hình StarGAN train được.
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Hinhve/anh_sinh_ra.png}
+    \caption{Ví dụ về ảnh sinh ra}
+    \label{fig:anh_sinh_ra}
+\end{figure}
+Quy trình thực nghiệm được tổ chức theo dạng pipeline khép kín. Với mỗi checkpoint huấn luyện, mô hình StarGAN được sử dụng ở chế độ kiểm tra để sinh ảnh từ tập 1000 ảnh đầu vào. Kết quả sinh ảnh có dạng ảnh ghép ngang, trong đó ảnh đầu tiên là ảnh gốc và 17 ảnh tiếp theo tương ứng với từng thuộc tính khuôn mặt được thay đổi (Hình~\ref{fig:anh_sinh_ra}). Các ảnh ghép này sau đó được tự động tách thành các ảnh thành phần và lưu trữ vào các thư mục riêng biệt theo từng thuộc tính, tạo tiền đề cho bước đánh giá định lượng.
+
+Việc đánh giá chất lượng ảnh sinh được thực hiện hoàn toàn tự động thông qua các chỉ số SSIM và FID. Trong đó, SSIM được sử dụng để đo mức độ tương đồng về cấu trúc giữa ảnh sinh và ảnh gốc, còn FID được sử dụng để đánh giá mức độ khác biệt phân phối đặc trưng giữa tập ảnh sinh và tập ảnh thật. Toàn bộ quá trình đánh giá được triển khai song song nhằm giảm thời gian tính toán, phù hợp với giới hạn tài nguyên của môi trường Kaggle.
+
+Nhìn chung, môi trường thực nghiệm được thiết lập theo hướng cân bằng giữa điều kiện tài nguyên thực tế và yêu cầu đánh giá khoa học. Các lựa chọn về phần cứng, phần mềm, dữ liệu và quy trình thực nghiệm đều nhằm đảm bảo rằng kết quả thu được phản ánh đúng chất lượng của mô hình StarGAN tại các giai đoạn huấn luyện khác nhau, đồng thời có thể tái hiện và mở rộng trong các nghiên cứu hoặc ứng dụng tiếp theo.
+
+
+
+
+
+
+
+
+\section{Phương pháp đánh giá mô hình}
+\label{section:5.2}
+
+Đánh giá chất lượng mô hình sinh ảnh nói chung và mô hình thay đổi thuộc tính khuôn mặt nói riêng là một bài toán không đơn giản, do kết quả đầu ra không chỉ cần đảm bảo tính chân thực về mặt thị giác mà còn phải phản ánh đúng mức độ thay đổi của các thuộc tính mong muốn. Trong bối cảnh bài toán thay đổi thuộc tính khuôn mặt đa miền với StarGAN, việc đánh giá mô hình cần được thực hiện một cách toàn diện, kết hợp giữa các chỉ số định lượng khách quan và phân tích định tính dựa trên quan sát trực quan.
+
+Xuất phát từ mục tiêu và phạm vi của đồ án đã trình bày trong Chương 1, phương pháp đánh giá trong đồ án này tập trung vào ba khía cạnh chính: (i) mức độ bảo toàn cấu trúc khuôn mặt gốc sau khi thay đổi thuộc tính, (ii) chất lượng và độ chân thực của ảnh sinh so với phân bố ảnh thật, và (iii) khả năng kiểm soát và ổn định của mô hình đối với từng thuộc tính khuôn mặt trong quá trình huấn luyện.
+
+Trước hết, để đánh giá mức độ bảo toàn cấu trúc và nội dung chính của khuôn mặt gốc, em sử dụng chỉ số SSIM (Structural Similarity Index Measure). Chỉ số này đo lường mức độ tương đồng cấu trúc giữa ảnh đầu vào và ảnh sinh sau khi thay đổi thuộc tính, dựa trên ba thành phần là độ sáng, độ tương phản và cấu trúc không gian. Trong ngữ cảnh của bài toán, SSIM được tính giữa ảnh gốc và ảnh sinh ứng với từng thuộc tính, qua đó phản ánh mức độ mà mô hình giữ được danh tính và hình dạng khuôn mặt ban đầu trong khi vẫn thực hiện thay đổi thuộc tính. Giá trị SSIM cao cho thấy mô hình hạn chế được hiện tượng méo hình, mất chi tiết hoặc thay đổi không mong muốn ở các vùng không liên quan.
+
+Tiếp theo, để đánh giá chất lượng tổng thể và độ chân thực của ảnh sinh, em sử dụng chỉ số FID (Fréchet Inception Distance). FID đo khoảng cách giữa phân bố đặc trưng của ảnh thật và ảnh sinh trong không gian đặc trưng được trích xuất bởi mạng Inception. Khác với các chỉ số dựa trên từng cặp ảnh, FID đánh giá ở mức phân bố, do đó phản ánh tốt hơn khả năng của mô hình trong việc sinh ra các ảnh có tính đa dạng và gần với dữ liệu thực. Trong đồ án này, FID được tính cho toàn bộ tập ảnh sinh tại các mốc huấn luyện khác nhau, đồng thời được phân tích riêng cho từng thuộc tính khuôn mặt, nhằm đánh giá mức độ ổn định và hiệu quả của mô hình đối với từng miền thuộc tính.
+
+Bên cạnh việc đánh giá tại một thời điểm huấn luyện cố định, đồ án còn tiến hành theo dõi sự thay đổi của các chỉ số SSIM và FID theo số vòng lặp huấn luyện (iteration). Cách tiếp cận này cho phép quan sát trực tiếp quá trình hội tụ của mô hình, phát hiện sớm các hiện tượng như quá khớp (overfitting), suy giảm chất lượng ảnh sinh hoặc mất cân bằng giữa các thuộc tính. Các biểu đồ SSIM và FID theo iteration đóng vai trò quan trọng trong việc lựa chọn checkpoint huấn luyện phù hợp để sử dụng cho các thí nghiệm tiếp theo và cho ứng dụng thử nghiệm.
+
+Ngoài các chỉ số định lượng, đánh giá định tính thông qua quan sát trực quan cũng được sử dụng như một phương pháp bổ trợ. Các ảnh sinh được so sánh trực tiếp với ảnh gốc và với các ảnh sinh tại những checkpoint khác nhau, tập trung vào các yếu tố như mức độ rõ ràng của thuộc tính thay đổi, tính tự nhiên của khuôn mặt, cũng như các lỗi thường gặp như nhiễu hoặc thay đổi sai thuộc tính. Phân tích định tính này đặc biệt quan trọng trong các trường hợp mà chỉ số định lượng chưa phản ánh đầy đủ cảm nhận thị giác của con người.
+
+Tóm lại, phương pháp đánh giá mô hình trong đồ án được xây dựng theo hướng đa chiều, kết hợp giữa các chỉ số định lượng phổ biến trong lĩnh vực sinh ảnh và phân tích định tính dựa trên quan sát thực tế. Cách tiếp cận này không chỉ cho phép đánh giá khách quan chất lượng mô hình StarGAN được huấn luyện, mà còn cung cấp cơ sở vững chắc cho việc phân tích sâu kết quả thực nghiệm và so sánh các checkpoint huấn luyện trong các mục tiếp theo của chương này.
+
+
+
+
+
+
+
+
+
+
+\section{Kết quả đánh giá tổng thể}
+\label{section:5.3}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{Hinhve/SSIM_trung_binh.png}
+    \caption{Biểu đồ chỉ số SSIM qua các iteration}
+    \label{fig:SSIM_trung_binh}
+\end{figure}
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{Hinhve/FID_trung_binh.png}
+    \caption{Biểu đồ chỉ số FID qua các iteration}
+    \label{fig:FID_trung_binh}
+\end{figure}
+
+Dựa trên phương pháp đánh giá đã trình bày ở Mục~\ref{section:5.2}, mô hình StarGAN được huấn luyện và đánh giá định kỳ tại nhiều mốc checkpoint khác nhau cách nhau 50\,000 iters, từ 50\,000 đến 650\,000 vòng lặp. Hai chỉ số chính được sử dụng để đánh giá chất lượng ảnh sinh là SSIM và FID, phản ánh lần lượt mức độ bảo toàn cấu trúc so với ảnh gốc và mức độ tương đồng phân bố giữa ảnh sinh và ảnh thật.
+
+Xét trên phương diện tổng thể, kết quả thực nghiệm cho thấy mô hình có xu hướng hội tụ ổn định khi số vòng lặp huấn luyện tăng lên. Ở các checkpoint ban đầu (50\,000–100\,000 iterations), giá trị SSIM trung bình còn ở mức tương đối thấp, trong khi FID trung bình khá cao. Điều này cho thấy tại giai đoạn đầu, mô hình chưa học được đầy đủ các đặc trưng hình ảnh khuôn mặt và việc thay đổi thuộc tính còn gây ra nhiều biến dạng không mong muốn. Khi quá trình huấn luyện tiếp tục, đặc biệt từ khoảng 150\,000 đến 300\,000 iterations, SSIM trung bình tăng dần, đồng thời FID giảm rõ rệt, phản ánh sự cải thiện đáng kể về cả mức độ bảo toàn cấu trúc khuôn mặt lẫn tính chân thực của ảnh sinh (Hình~\ref{fig:SSIM_trung_binh}, Hình~\ref{fig:FID_trung_binh}).
+
+Tại các checkpoint từ 300\,000 đến 400\,000 iterations, mô hình đạt được sự cân bằng tốt giữa hai tiêu chí đánh giá. SSIM trung bình duy trì ở mức cao và ổn định, cho thấy các chi tiết hình học và cấu trúc khuôn mặt của ảnh đầu vào được giữ lại tương đối tốt sau khi thay đổi thuộc tính. Đồng thời, FID trung bình giảm xuống mức thấp, phản ánh việc phân bố đặc trưng của ảnh sinh ngày càng tiệm cận với ảnh thật trong tập dữ liệu CelebA. Đây có thể xem là giai đoạn mô hình đạt hiệu năng tổng thể tốt nhất, phù hợp để lựa chọn làm checkpoint đại diện cho quá trình huấn luyện.
+
+Ở các checkpoint muộn hơn (từ 450\,000 iterations trở đi), kết quả đánh giá cho thấy SSIM trung bình không còn tăng đáng kể và có xu hướng dao động nhẹ, trong khi FID không tiếp tục giảm mà duy trì quanh một ngưỡng nhất định. Hiện tượng này cho thấy mô hình đã tiệm cận trạng thái hội tụ, và việc huấn luyện thêm không mang lại cải thiện rõ rệt về chất lượng ảnh sinh. Trong một số trường hợp, việc huấn luyện quá lâu còn có thể dẫn đến hiện tượng quá khớp nhẹ, khiến chất lượng tổng thể không ổn định bằng giai đoạn trước đó.
+
+Tổng hợp các kết quả trên, có thể nhận thấy mô hình StarGAN trong đồ án đã học được biểu diễn hiệu quả cho bài toán thay đổi thuộc tính khuôn mặt trên tập dữ liệu CelebA. Các chỉ số SSIM và FID trung bình đều cho thấy xu hướng cải thiện rõ ràng theo thời gian huấn luyện và đạt giá trị ổn định ở các checkpoint trung gian. Những kết quả này là cơ sở quan trọng để tiếp tục phân tích sâu hơn hiệu năng của mô hình theo từng thuộc tính khuôn mặt cụ thể, nội dung sẽ được trình bày chi tiết trong Mục~\ref{section:5.4}.
+
+
+
+
+
+
+
+
+
+
+
+\section{Phân tích kết quả theo từng thuộc tính thay đổi trên ảnh khuôn mặt}
+\label{section:5.4}
+
+Bên cạnh việc đánh giá tổng thể mô hình thông qua các chỉ số trung bình, việc phân tích chi tiết kết quả theo từng thuộc tính khuôn mặt là cần thiết nhằm làm rõ khả năng học và mức độ ổn định của mô hình StarGAN đối với từng loại biến đổi cụ thể. Do các thuộc tính khuôn mặt có bản chất, mức độ biểu hiện và độ khó khác nhau, kết quả SSIM và FID thu được giữa các thuộc tính cũng thể hiện sự khác biệt đáng kể. Phần này tập trung phân tích xu hướng biến đổi của hai chỉ số SSIM và FID theo số vòng lặp huấn luyện đối với từng thuộc tính trong tập CelebA.
+
+
+
+\begin{figure}
+    \centering
+    
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_hoi_dau.png}
+        \caption{Thuộc tính: Hói đầu}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_toc_mai.png}
+        \caption{Thuộc tính: Tóc mái}
+    \end{subfigure}
+
+    \vspace{0.3cm}
+
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_toc_den.png}
+        \caption{Thuộc tính: Tóc đen}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_toc_vang.png}
+        \caption{Thuộc tính: Tóc vàng}
+    \end{subfigure}
+
+    \vspace{0.3cm}
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_toc_bac.png}
+        \caption{Thuộc tính: Tóc bạc}
+    \end{subfigure}
+
+    \caption{Biểu đồ FID của nhóm ảnh liên quan đến tóc}
+    \label{fig:nhom_toc}
+\end{figure}
+
+
+Trước hết, nhóm các thuộc tính liên quan đến kiểu tóc và màu tóc, bao gồm \textit{Hói Đầu}, \textit{Tóc Mái}, \textit{Tóc Đen}, \textit{Tóc Vàng} và \textit{Tóc Bạc}, cho thấy khả năng học khá tốt của mô hình (Hình~\ref{fig:nhom_toc}). Các thuộc tính này thường có sự thay đổi rõ rệt về mặt thị giác, tập trung chủ yếu vào vùng tóc, do đó mô hình dễ dàng nắm bắt được các đặc trưng không gian liên quan. Chỉ số SSIM của nhóm này tăng dần theo số vòng lặp huấn luyện và đạt giá trị ổn định từ các checkpoint trung và muộn, trong khi FID giảm mạnh trong giai đoạn đầu và tiếp tục cải thiện ở giai đoạn sau. Điều này cho thấy ảnh sinh ra ngày càng giữ được cấu trúc tổng thể của ảnh gốc, đồng thời phân bố ảnh sinh tiệm cận hơn với phân bố ảnh thật.
+
+\begin{figure}
+    \centering
+
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_rau_de.png}
+        \caption{Thuộc tính: Râu dê}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_rau_mep.png}
+        \caption{Thuộc tính: Râu mép}
+    \end{subfigure}
+
+    \vspace{0.3cm}
+    
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_khong_rau.png}
+        \caption{Thuộc tính: Không râu}
+    \end{subfigure}
+
+    \caption{Biểu đồ FID của nhóm ảnh liên quan đến râu}
+    \label{fig:nhom_rau}
+\end{figure}
+
+
+
+Đối với các thuộc tính liên quan đến râu như \textit{Râu Dê}, \textit{Râu Mép} và \textit{Không Râu}, mô hình cũng đạt kết quả tương đối tốt, tuy nhiên tốc độ hội tụ có phần chậm hơn so với nhóm thuộc tính về tóc (Hình~\ref{fig:nhom_rau}). Nguyên nhân có thể đến từ việc các đặc trưng này thường chỉ chiếm diện tích nhỏ trên khuôn mặt và dễ bị ảnh hưởng bởi tư thế đầu, ánh sáng cũng như chất lượng ảnh. Dù vậy, các giá trị FID của nhóm này vẫn giảm đều theo quá trình huấn luyện, cho thấy mô hình dần học được cách biến đổi các chi tiết tinh vi mà không làm phá vỡ cấu trúc tổng thể của khuôn mặt.
+
+
+\begin{figure}
+    \centering
+    
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_mum_mim.png}
+        \caption{Thuộc tính: Mặt mũm mĩm}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_nam_gioi.png}
+        \caption{Thuộc tính: Nam giới}
+    \end{subfigure}
+
+    \vspace{0.3cm}
+
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_da_nhot_nhat.png}
+        \caption{Thuộc tính: Da nhợt nhạt (da trắng)}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_ma_hong.png}
+        \caption{Thuộc tính: Má hồng}
+    \end{subfigure}
+
+    \caption{Biểu đồ FID của nhóm ảnh liên quan đến hình thái khuôn mặt, màu da mặt}
+    \label{fig:nhom_da}
+\end{figure}
+
+Nhóm các thuộc tính mang tính hình thái khuôn mặt hoặc đặc điểm sinh học, bao gồm \textit{Mũm Mĩm}, \textit{Nam Giới}, \textit{Da Nhợt Nhạt} và \textit{Má Hồng}, thể hiện mức độ khó cao hơn (Hình~\ref{fig:nhom_da}). Các thuộc tính này không chỉ ảnh hưởng cục bộ mà còn liên quan đến nhiều vùng trên khuôn mặt, thậm chí là toàn bộ bố cục ảnh. Do đó, SSIM của nhóm này có xu hướng tăng chậm hơn và dao động nhẹ giữa các checkpoint, trong khi FID vẫn duy trì xu hướng giảm nhưng với biên độ không lớn. Điều này phản ánh thách thức của mô hình trong việc thay đổi các đặc điểm mang tính toàn cục mà vẫn bảo toàn danh tính và các chi tiết quan trọng của khuôn mặt.
+
+\begin{figure}
+    \centering
+    
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_mim_cuoi.png}
+        \caption{Thuộc tính: Miệng mỉm cười}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_mieng_hoi_ho.png}
+        \caption{Thuộc tính: Miệng hơi hở}
+    \end{subfigure}
+
+    \caption{Biểu đồ FID của nhóm ảnh liên quan đến biểu cảm khuôn mặt, hình miệng}
+    \label{fig:nhom_mieng}
+\end{figure}
+
+
+
+Đối với các thuộc tính biểu cảm và trạng thái khuôn mặt như \textit{Mỉm Cười} và \textit{Miệng Hơi Mở}, kết quả cho thấy mô hình có khả năng học tương đối tốt, đặc biệt ở các checkpoint muộn (Hình~\ref{fig:nhom_mieng}). Đây là các thuộc tính có sự thay đổi hình học rõ ràng ở vùng miệng, giúp mô hình dễ dàng phát hiện và tái tạo. Chỉ số SSIM của các thuộc tính này đạt giá trị cao và ổn định, trong khi FID giảm xuống mức thấp, cho thấy ảnh sinh ra vừa giữ được cấu trúc khuôn mặt, vừa thể hiện đúng biểu cảm mong muốn.
+
+\begin{figure}
+    \centering
+
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_deo_kinh.png}
+        \caption{Thuộc tính: Đeo kính}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_trang_diem_dam.png}
+        \caption{Thuộc tính: Trang điểm đậm}
+    \end{subfigure}
+
+    \vspace{0.3cm}
+    
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Hinhve/FID_danh_son.png}
+        \caption{Thuộc tính: Đánh son}
+    \end{subfigure}
+
+    \caption{Biểu đồ FID của nhóm ảnh liên quan đến trang điểm, phụ kiện}
+    \label{fig:nhom_trang_diem}
+\end{figure}
+
+
+
+Cuối cùng, các thuộc tính liên quan đến trang điểm và phụ kiện, bao gồm \textit{Trang Điểm Đậm}, \textit{Đánh Son} và \textit{Đeo Kính}, cho thấy sự cải thiện rõ rệt theo quá trình huấn luyện (Hình~\ref{fig:nhom_trang_diem}). Đây là những thuộc tính thường gắn với các vùng cụ thể như mắt, môi hoặc toàn bộ khuôn mặt, đồng thời có sự tương phản màu sắc cao. Nhờ đó, mô hình StarGAN có thể học được các đặc trưng tương ứng khá hiệu quả. Các chỉ số FID của nhóm này giảm mạnh ở giai đoạn giữa và duy trì ổn định ở giai đoạn sau, trong khi SSIM đạt mức tương đối cao so với nhiều nhóm thuộc tính khác.
+
+Tổng hợp lại, kết quả phân tích theo từng thuộc tính cho thấy mô hình StarGAN hoạt động hiệu quả hơn đối với các thuộc tính có sự thay đổi rõ ràng về mặt thị giác và mang tính cục bộ, trong khi gặp nhiều thách thức hơn với các thuộc tính mang tính toàn cục hoặc có biểu hiện tinh vi. Những quan sát này không chỉ giúp đánh giá sâu hơn chất lượng mô hình mà còn là cơ sở quan trọng để lựa chọn checkpoint phù hợp và đề xuất các hướng cải tiến trong các nghiên cứu và ứng dụng tiếp theo.
+
+
+
+
+
+
+
+
+
+\section{Nhận xét và so sánh các checkpoint huấn luyện}
+\label{section:5.5}
+
+Dựa trên các kết quả đánh giá tổng thể ở Mục~\ref{section:5.3} và phân tích chi tiết theo từng thuộc tính khuôn mặt ở Mục~\ref{section:5.4}, có thể nhận thấy quá trình huấn luyện mô hình StarGAN diễn ra theo xu hướng hợp lý và phản ánh rõ sự tiến bộ của mô hình theo số vòng lặp huấn luyện (iteration).
+
+Trong giai đoạn đầu của quá trình huấn luyện (từ 50\,000 đến khoảng 150\,000 iteration), các chỉ số đánh giá cho thấy mô hình còn chưa ổn định. Giá trị FID trung bình ở mức cao, phản ánh sự khác biệt lớn giữa phân phối ảnh sinh và ảnh thật, trong khi SSIM tuy có xu hướng tăng nhưng vẫn còn dao động đáng kể giữa các thuộc tính. Điều này là phù hợp với đặc điểm của mô hình GAN, khi bộ sinh và bộ phân biệt vẫn đang trong quá trình học các đặc trưng cơ bản của dữ liệu khuôn mặt và mối quan hệ giữa các thuộc tính.
+
+Từ khoảng 200\,000 đến 350\,000 iteration, mô hình bắt đầu thể hiện sự cải thiện rõ rệt. Giá trị FID trung bình giảm mạnh, cho thấy chất lượng ảnh sinh được nâng cao đáng kể và phân phối ảnh sinh tiến gần hơn tới phân phối ảnh thật. Đồng thời, SSIM duy trì ở mức tương đối ổn định và cao hơn so với giai đoạn đầu, phản ánh khả năng bảo toàn cấu trúc khuôn mặt gốc khi thay đổi thuộc tính. Ở giai đoạn này, hầu hết các thuộc tính như \textit{Smiling}, \textit{Male}, \textit{Wearing Lipstick} hay \textit{Black Hair} đều đạt được sự cân bằng tốt giữa mức độ biến đổi thuộc tính và tính nhất quán về hình dạng khuôn mặt.
+
+Trong giai đoạn sau (từ 400\,000 đến 650\,000 iteration), mặc dù SSIM không còn tăng mạnh mà có xu hướng dao động nhẹ quanh một giá trị trung bình, chỉ số FID tiếp tục giảm và đạt mức thấp nhất tại checkpoint 500\,000. Cụ thể, checkpoint này cho giá trị FID trung bình nhỏ nhất trong toàn bộ quá trình huấn luyện, đồng thời SSIM vẫn được duy trì ở mức ổn định, không xuất hiện dấu hiệu suy giảm nghiêm trọng. Điều này cho thấy mô hình đã đạt được trạng thái cân bằng tương đối tốt giữa hai mục tiêu: tạo ảnh có chất lượng cao và bảo toàn cấu trúc khuôn mặt ban đầu.
+
+So sánh chi tiết giữa các checkpoint lân cận cho thấy, mặc dù các checkpoint sau 500\,000 iteration (ví dụ 550\,000, 600\,000 và 650\,000) vẫn duy trì chất lượng ảnh ở mức tốt, song không mang lại sự cải thiện đáng kể về FID, thậm chí trong một số thuộc tính còn xuất hiện hiện tượng FID tăng nhẹ. Điều này có thể được lý giải bởi hiện tượng bão hòa trong huấn luyện GAN, khi mô hình đã học được đầy đủ các đặc trưng chính của dữ liệu và việc huấn luyện tiếp chủ yếu chỉ mang lại những cải thiện nhỏ hoặc dao động ngẫu nhiên.
+
+Từ các phân tích trên, checkpoint tại 500\,000 iteration được lựa chọn là mô hình tối ưu để sử dụng trong các bước tiếp theo của đồ án. Việc lựa chọn này dựa trên ba cơ sở chính: (i) đạt giá trị FID trung bình thấp nhất, phản ánh chất lượng ảnh sinh tốt nhất; (ii) duy trì SSIM ở mức ổn định và phù hợp, đảm bảo tính nhất quán của khuôn mặt gốc; và (iii) thể hiện sự cân bằng tốt giữa các thuộc tính khuôn mặt khác nhau, không xảy ra hiện tượng suy giảm chất lượng rõ rệt ở một nhóm thuộc tính cụ thể.
+
+Checkpoint 500\,000 do đó được sử dụng làm mô hình cuối cùng cho quá trình xây dựng ứng dụng thử nghiệm ở Chương~6. Việc sử dụng checkpoint này giúp đảm bảo rằng hệ thống ứng dụng không chỉ tạo ra ảnh có chất lượng thị giác cao, mà còn thể hiện rõ ràng và nhất quán các thuộc tính khuôn mặt theo yêu cầu của người dùng.
+
+
+
+
+
+
+
+
+
+\end{document}

@@ -1,0 +1,1 @@
+Danh sách các tài nguyên tuyệt vời được tuyển chọn để khám phá RAG (Retrieval Augmentation Generation): https://github.com/run-llama/awesome-rag
